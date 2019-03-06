@@ -3,7 +3,6 @@ package utilities;
 import beans.Block;
 import beans.Message;
 import beans.MessageType;
-import com.sun.security.ntlm.Client;
 import entities.Blockchain;
 import entities.NodeMiner;
 import entities.Transaction;
