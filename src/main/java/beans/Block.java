@@ -40,12 +40,17 @@ public class Block implements Serializable {
      * todo:
      * Function that calculates the hash on the current block
      */
-    public String calculateHash() { // add transactions to hash!!
+    public String calculateHash() {
+        String data = "";
+        for(Transaction tr: transactions){
+            data += tr.transaction_id;
+        }
         return StringUtilities.applySha256(
                 previous_hash +
                         timestamp +
                         nonce +
-                        index
+                        index +
+                        data
         );
     }
 
