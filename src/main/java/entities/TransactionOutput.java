@@ -9,7 +9,7 @@ public class TransactionOutput implements Serializable {
 
     public String id;
     public String parentTransactionId; //the id of the transaction this output was created in
-    public PublicKey reciepient; //also known as the new owner of these coins.
+    public PublicKey recipient; //also known as the new owner of these coins.
     public double amount; //the amount of coins they own
 
 

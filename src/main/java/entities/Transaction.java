@@ -42,6 +42,8 @@ public class Transaction implements Serializable {
         for(TransactionOutput tr: transaction_outputs ){
             data += tr.id;
             data += tr.parentTransactionId;
+            data += tr.amount;
+            data += tr.recipient;
         }
         data += sender_address;
         data += receiver_address;
@@ -52,6 +54,8 @@ public class Transaction implements Serializable {
     //Signs all the data we dont wish to be tampered with.
 
     public void generateSignature(PrivateKey privateKey) {
+
+
     }
 
     //Verifies the data we signed hasnt been tampered with

@@ -9,18 +9,39 @@ import java.util.Map;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
+import static java.security.KeyPairGenerator.getInstance;
+
 public class Wallet implements Serializable {
     public static Logger LOGGER = Logger.getLogger(Wallet.class.getName());
 
+    public PublicKey publicKey;
     private PrivateKey privateKey;
-    private PublicKey publicKey;
 
     public HashMap<String,TransactionOutput> UTXOs = new HashMap<String,TransactionOutput>(); //only UTXOs owned by this wallet.
+
+    public Wallet(){
+        KeyPair keyPair = generateKeyPair();
+        publicKey = keyPair.getPublic();
+        privateKey = keyPair.getPrivate();
+
+    }
 
     /**
      * Function generating a new Keypair of public and private key for this wallet
      */
-    public void generateKeyPair() {
+    public KeyPair generateKeyPair() {
+        try {
+            KeyPairGenerator generator = getInstance("RSA");
+            generator.initialize(2048, new SecureRandom());
+            return generator.generateKeyPair();
+        }
+        catch (NoSuchAlgorithmException e){
+            return null;
+        }
+    }
+
+    public void generateSignature(){
+
     }
 
 
