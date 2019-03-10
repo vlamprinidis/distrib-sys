@@ -5,5 +5,9 @@ package beans;
  * to handle any different cases
  */
 public enum MessageType {
-
+    PeerID,
+    PeerPort,
+    PeerInfo,
+    IdRequest,
+    Ping
 }
