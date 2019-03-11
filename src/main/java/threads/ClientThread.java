@@ -1,17 +1,11 @@
 package threads;
 
 import beans.Message;
-import beans.MessageType;
-import entities.NodeMiner;
-import entities.Transaction;
 
-import javax.sound.sampled.LineEvent;
 import java.io.IOException;
 import java.io.ObjectOutputStream;
 import java.net.InetAddress;
 import java.net.Socket;
-import java.util.ArrayList;
-import java.util.List;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.logging.Level;
@@ -19,6 +13,7 @@ import java.util.logging.Logger;
 
 public class ClientThread extends Thread {
 
+    private static final Logger LOGGER = Logger.getLogger("NOOBCASH");
     private Socket socket = null;
     private InetAddress address;
     private int port;
@@ -31,32 +26,38 @@ public class ClientThread extends Thread {
     public ClientThread(InetAddress address, int port) {
         this.address = address;
         this.port = port;
-
     }
 
     @Override
     public void run() {
         if (socket == null) {
             try {
-                System.out.println("Trying to connect to " + address.toString() + port);
                 socket = new Socket(address, port);
             } catch (IOException e) {
-                e.printStackTrace();
+                LOGGER.log(Level.SEVERE, e.toString(), e);
+                return;
             }
         }
+        LOGGER.fine("Connected to peer with port : " + port);
         ObjectOutputStream oos;
         try {
             oos = new ObjectOutputStream(socket.getOutputStream());
         } catch (IOException e) {
-            e.printStackTrace();
+            LOGGER.log(Level.SEVERE, e.toString(), e);
             return;
         }
         Message msg;
-        while (true) try {
-            msg = queue.take();
-            oos.writeObject(msg);
-        } catch (Exception e) {
-            e.printStackTrace();
+        while (true) {
+            try {
+                msg = queue.take();
+                oos.writeObject(msg);
+            } catch (InterruptedException e) {
+                LOGGER.log(Level.SEVERE, e.toString(), e);
+                return;
+            } catch (IOException e) {
+                LOGGER.log(Level.SEVERE, e.toString(), e);
+            }
+            LOGGER.finer("Successfully sent message to CLI");
         }
     }
 
@@ -64,7 +65,7 @@ public class ClientThread extends Thread {
         try {
             queue.put(msg);
         } catch (InterruptedException e) {
-            e.printStackTrace();
+            LOGGER.log(Level.SEVERE, e.toString(), e);
         }
     }
 }

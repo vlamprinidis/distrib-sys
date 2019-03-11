@@ -4,13 +4,14 @@ import beans.Message;
 import beans.MessageType;
 import org.apache.commons.cli.*;
 
-import java.io.ObjectInputStream;
-import java.io.ObjectOutputStream;
+import java.io.*;
 import java.net.InetAddress;
 import java.net.Socket;
 import java.net.UnknownHostException;
+import java.util.logging.*;
 
 public class NoobCashCLI {
+    private static final Logger LOGGER = Logger.getLogger("NOOBCASH");
     @SuppressWarnings("Duplicates")
     public static void main(String[] args) {
         Options options = new Options();
@@ -33,31 +34,92 @@ public class NoobCashCLI {
         String p = cmd.getOptionValue("port");
         int port = Integer.parseInt(p);
 
-        InetAddress serverAddress = null;
+        LOGGER.setUseParentHandlers(false);
+        LOGGER.setLevel(Level.ALL);
+
+        ConsoleHandler consoleHandler = new ConsoleHandler();
+        consoleHandler.setFormatter(new SimpleFormatter());
+        consoleHandler.setLevel(Level.INFO);
+        LOGGER.addHandler(consoleHandler);
+
+        FileHandler fileHandler;
+        try {
+            fileHandler = new FileHandler("noobcash-cli.%u.%g.log");
+            fileHandler.setFormatter(new SimpleFormatter());
+            fileHandler.setLevel(Level.ALL);
+            LOGGER.addHandler(fileHandler);
+        } catch (IOException e) {
+            LOGGER.log(Level.WARNING, e.toString(), e);
+        }
+
+        InetAddress serverAddress;
         try {
             serverAddress  = InetAddress.getByName("127.0.0.1");
         } catch (UnknownHostException e) {
-            e.printStackTrace();
-            System.exit(1);
+            LOGGER.severe("Couldn't find backend address");
+            return;
         }
 
-        Socket socket = null;
-        ObjectInputStream ois = null;
-        ObjectOutputStream oos = null;
+        Socket socket;
+        ObjectInputStream ois;
+        ObjectOutputStream oos;
         try {
             socket = new Socket(serverAddress, port);
-            System.out.println("Connected");
+        } catch (IOException e) {
+            LOGGER.severe("Couldn't connect to backend");
+            return;
+        }
+        LOGGER.info("Connected");
+        Message msg;
+        try {
             oos = new ObjectOutputStream(socket.getOutputStream());
             oos.writeObject(new Message(MessageType.IdRequest, null));
             ois = new ObjectInputStream(socket.getInputStream());
-            Message msg = (Message) ois.readObject();
-            assert msg.messageType == MessageType.PeerID;
-            int id = (Integer) msg.data;
-            System.out.println("Got id : " + id);
-            Thread.sleep(800000);
-        } catch (Exception e) {
-            e.printStackTrace();
-            System.exit(1);
+            msg = (Message) ois.readObject();
+        } catch (IOException e) {
+            LOGGER.log(Level.SEVERE, e.toString(), e);
+            return;
+        } catch (ClassNotFoundException e) {
+            LOGGER.severe("Message class not found");
+            return;
         }
+        if (msg.messageType != MessageType.PeerID) {
+            LOGGER.severe("Instead of PeerId, got : " + msg.messageType);
+            return;
+        }
+        int id = (Integer) msg.data;
+        LOGGER.info("Got backend id : " + id);
+
+        File file = new File("./transactions/5nodes/transactions" + id + ".txt");
+        BufferedReader reader;
+        try {
+            reader = new BufferedReader(new FileReader(file));
+        } catch (FileNotFoundException e) {
+            LOGGER.severe("Couldn't open transactions file");
+            return;
+        }
+        String text;
+
+        while (true) {
+            try {
+                if ((text = reader.readLine()) == null) break;
+            } catch (IOException e) {
+                LOGGER.log(Level.SEVERE, e.toString(), e);
+                return;
+            }
+            LOGGER.finest("Sending message to backend");
+            try {
+                oos.writeObject(new Message(MessageType.Ping, text));
+            } catch (IOException e) {
+                LOGGER.severe("Couldn't send message to backend");
+                return;
+            }
+        }
+
+        try {
+            Thread.sleep(100000);
+        } catch (InterruptedException ignored) {
+        }
+
     }
 }

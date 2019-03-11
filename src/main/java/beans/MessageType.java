@@ -9,5 +9,6 @@ public enum MessageType {
     PeerPort,
     PeerInfo,
     IdRequest,
-    Ping
+    Ping,
+    Pong
 }

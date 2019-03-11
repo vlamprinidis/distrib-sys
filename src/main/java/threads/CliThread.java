@@ -8,34 +8,53 @@ import java.io.ObjectOutputStream;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.concurrent.BlockingQueue;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 public class CliThread extends Thread {
+    private static final Logger LOGGER = Logger.getLogger("NOOBCASH");
     private int port;
     private BlockingQueue<Message> queue;
-    Socket socket;
+    private Socket socket;
 
     public CliThread(int port, BlockingQueue<Message> queue) {
         this.port = port;
         this.queue = queue;
     }
 
+    @SuppressWarnings("Duplicates")
     @Override
     public void run() {
         ObjectInputStream ois;
+        ServerSocket serverSocket;
         try {
-            ServerSocket serverSocket = new ServerSocket(port);
-            Socket socket = serverSocket.accept();
-            this.socket = socket;
-            serverSocket.close();
-            ois = new ObjectInputStream(socket.getInputStream());
-        } catch (Exception e) {
-            e.printStackTrace();
+            serverSocket = new ServerSocket(port);
+        } catch (IOException e) {
+            LOGGER.log(Level.SEVERE, e.toString(), e);
             return;
         }
-        while(true) try {
-            queue.put((Message) ois.readObject());
-        } catch (Exception e) {
-            e.printStackTrace();
+        try {
+            Socket socket = serverSocket.accept();
+            serverSocket.close();
+            this.socket = socket;
+            ois = new ObjectInputStream(socket.getInputStream());
+        } catch (IOException e) {
+            LOGGER.log(Level.SEVERE, e.toString(), e);
+            System.exit(1);
+            return;
+        }
+
+        while(true) {
+            try {
+                queue.put((Message) ois.readObject());
+            } catch (InterruptedException | IOException e) {
+                LOGGER.log(Level.SEVERE, e.toString(), e);
+                return;
+            } catch (ClassNotFoundException e) {
+                LOGGER.log(Level.WARNING, "Unexpectedly cliThread got non-Message object from queue : [{0}]", e);
+                continue;
+            }
+            LOGGER.finest("Successfully got message from cli and put it into queue");
         }
     }
 
@@ -44,7 +63,7 @@ public class CliThread extends Thread {
             ObjectOutputStream oos = new ObjectOutputStream(socket.getOutputStream());
             oos.writeObject(msg);
         } catch (IOException e) {
-            e.printStackTrace();
+            LOGGER.log(Level.SEVERE, e.toString(), e);
         }
     }
 }

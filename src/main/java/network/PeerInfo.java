@@ -6,8 +6,8 @@ import java.net.InetAddress;
 import java.net.Socket;
 
 public class PeerInfo implements Serializable {
-    public InetAddress address;
-    public int port;
+    InetAddress address;
+    int port;
     public transient Socket server_socket;
 
     public PeerInfo(InetAddress address, int port, Socket server_socket){

@@ -16,6 +16,7 @@ import java.util.logging.Logger;
 
 public class ServerThread extends Thread {
 
+    private static final Logger LOGGER = Logger.getLogger("NOOBCASH");
     private Socket socket;
     private BlockingQueue<Message> queue;
 
@@ -29,15 +30,22 @@ public class ServerThread extends Thread {
         ObjectInputStream ois;
         try {
             ois = new ObjectInputStream(socket.getInputStream());
-        } catch (Exception e) {
-            e.printStackTrace();
+        } catch (IOException e) {
+            LOGGER.log(Level.SEVERE, e.toString(), e);
             return;
         }
 
-        while(true) try {
-            queue.put((Message) ois.readObject());
-        } catch (Exception e) {
-            e.printStackTrace();
+        while(true) {
+            try {
+                queue.put((Message) ois.readObject());
+            } catch (InterruptedException | IOException e) {
+                LOGGER.log(Level.SEVERE, e.toString(), e);
+                return;
+            } catch (ClassNotFoundException e) {
+                LOGGER.log(Level.WARNING, "Unexpectedly serverThread got non-Message object from queue : [{0}]", e);
+                continue;
+            }
+            LOGGER.finest("Successfully got message from peer and put it into queue");
         }
 
     }
