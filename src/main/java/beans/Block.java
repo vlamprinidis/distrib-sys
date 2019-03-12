@@ -29,7 +29,7 @@ public class Block implements Serializable {
     //public Block(String data, String previous_hash, int previous_index){
         this.nonce = 0;
         this.index = previous_index + 1;
-        this.transactions = new ArrayList<>(transactions);
+        this.transactions = transactions;
         this.previous_hash = previous_hash;
         this.timestamp = new Date().getTime();
         this.current_hash = this.calculateHash();

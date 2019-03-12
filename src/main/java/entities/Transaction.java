@@ -16,51 +16,58 @@ public class Transaction implements Serializable {
     public String transaction_id;
     public List<TransactionInput> transaction_inputs;
     public List<TransactionOutput> transaction_outputs;
-    private PrivateKey signature;
+    private String signature="";
 
     public static Logger LOGGER = Logger.getLogger(Transaction.class.getName());
 
-    public Transaction(PublicKey send, PublicKey receive, double value, List<TransactionInput> in, List<TransactionOutput> out){
-        sender_address = send;
-        receiver_address = receive;
+    //public Transaction(PublicKey send, PublicKey receive, double value, List<TransactionInput> in, List<TransactionOutput> out){
+    public Transaction(Wallet wallet_send, Wallet wallet_receive, double value, List<TransactionInput> in, List<TransactionOutput> out){
+        sender_address = wallet_send.publicKey;
+        receiver_address = wallet_receive.publicKey;
         this.amount = value;
-        transaction_inputs = new ArrayList<>(in);
-        transaction_outputs = new ArrayList<>(out);
+        transaction_inputs = in;
+        transaction_outputs = out;
 
-        transaction_id = calculateHash();
-
-
+        transaction_id = calculateHash(giveData());
     }
 
-
-    // This Calculates the transaction hash (which will be used as its Id)
-    private String calculateHash() {
+    private String giveData(){
         String data="";
-        for(TransactionInput tr: transaction_inputs ){
-            data += tr.previousOutputId;
+        if(transaction_inputs != null) {
+            for (TransactionInput tr : transaction_inputs) {
+                data += tr.previousOutputId;
+            }
         }
-        for(TransactionOutput tr: transaction_outputs ){
-            data += tr.id;
-            data += tr.parentTransactionId;
-            data += tr.amount;
-            data += tr.recipient;
+        if(transaction_outputs != null) {
+            for (TransactionOutput tr : transaction_outputs) {
+                data += tr.id;
+                data += tr.parentTransactionId;
+                data += tr.amount;
+                data += tr.recipient;
+            }
         }
         data += sender_address;
         data += receiver_address;
         data += amount;
+        return data;
+    }
+
+
+    // This Calculates the transaction hash (which will be used as its Id)
+    private String calculateHash(String data) {
         return StringUtilities.applySha256(data);
     }
 
     //Signs all the data we dont wish to be tampered with.
 
-    public void generateSignature(PrivateKey privateKey) {
-
-
+    //public void generateSignature(PrivateKey privateKey) {
+    public void generateSignature(Wallet wallet_send) {
+       this.signature = StringUtilities.sign(giveData(), wallet_send.privateKey);
     }
 
     //Verifies the data we signed hasnt been tampered with
-    public boolean verifiySignature() {
-        return true;
+    public boolean verifySignature() {
+        return StringUtilities.verify(giveData(), this.signature, sender_address);
     }
 
     //Returns true if new transaction could be created.

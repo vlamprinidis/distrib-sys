@@ -33,33 +33,33 @@ public class StringUtilities {
         }
     }
 
-    public static String encrypt(String plainText, PublicKey publicKey) {
+    public static String sign(String plainText, PrivateKey privateKey) {
         try {
-            Cipher encryptCipher = Cipher.getInstance("RSA");
-            encryptCipher.init(Cipher.ENCRYPT_MODE, publicKey);
+            Signature privateSignature = Signature.getInstance("SHA256withRSA");
+            privateSignature.initSign(privateKey);
+            privateSignature.update(plainText.getBytes(UTF_8));
 
-            byte[] cipherText = encryptCipher.doFinal(plainText.getBytes(UTF_8));
+            byte[] signature = privateSignature.sign();
 
-            return Base64.getEncoder().encodeToString(cipherText);
-        } catch (BadPaddingException | IllegalBlockSizeException
-                | InvalidKeyException | NoSuchPaddingException | NoSuchAlgorithmException e) {
+            return Base64.getEncoder().encodeToString(signature);
+        } catch (NoSuchAlgorithmException | SignatureException | InvalidKeyException e) {
             e.printStackTrace();
             return null;
         }
     }
 
-    public static String decrypt(String cipherText, PrivateKey privateKey) {
+    public static boolean verify(String plainText, String signature, PublicKey publicKey) {
         try {
-            byte[] bytes = Base64.getDecoder().decode(cipherText);
+            Signature publicSignature = Signature.getInstance("SHA256withRSA");
+            publicSignature.initVerify(publicKey);
+            publicSignature.update(plainText.getBytes(UTF_8));
 
-            Cipher decryptCipher = Cipher.getInstance("RSA");
-            decryptCipher.init(Cipher.DECRYPT_MODE, privateKey);
+            byte[] signatureBytes = Base64.getDecoder().decode(signature);
 
-            return new String(decryptCipher.doFinal(bytes), UTF_8);
-        } catch (NoSuchAlgorithmException | InvalidKeyException
-                | NoSuchPaddingException | IllegalBlockSizeException | BadPaddingException e) {
+            return publicSignature.verify(signatureBytes);
+        } catch (NoSuchAlgorithmException | SignatureException | InvalidKeyException e) {
             e.printStackTrace();
-            return null;
+            return false;
         }
     }
 

@@ -15,7 +15,7 @@ public class Wallet implements Serializable {
     public static Logger LOGGER = Logger.getLogger(Wallet.class.getName());
 
     public PublicKey publicKey;
-    private PrivateKey privateKey;
+    public PrivateKey privateKey;
 
     public HashMap<String,TransactionOutput> UTXOs = new HashMap<String,TransactionOutput>(); //only UTXOs owned by this wallet.
 
