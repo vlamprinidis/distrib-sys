@@ -6,6 +6,7 @@ import java.io.Serializable;
 import java.security.PrivateKey;
 import java.security.PublicKey;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
 import java.util.logging.Logger;
 
@@ -17,6 +18,7 @@ public class Transaction implements Serializable {
     public List<TransactionInput> transaction_inputs;
     public List<TransactionOutput> transaction_outputs;
     private String signature="";
+    private long timestamp;
 
     public static Logger LOGGER = Logger.getLogger(Transaction.class.getName());
 
@@ -27,6 +29,7 @@ public class Transaction implements Serializable {
         this.amount = value;
         transaction_inputs = in;
         transaction_outputs = out;
+        this.timestamp = new Date().getTime();
 
         transaction_id = calculateHash(giveData());
     }
@@ -49,6 +52,7 @@ public class Transaction implements Serializable {
         data += sender_address;
         data += receiver_address;
         data += amount;
+        data += timestamp;
         return data;
     }
 
