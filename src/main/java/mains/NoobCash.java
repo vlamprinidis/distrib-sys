@@ -16,6 +16,7 @@ import java.util.logging.*;
 import beans.*;
 import network.*;
 import threads.CliThread;
+import threads.MinerThread;
 
 
 public class NoobCash {
@@ -81,9 +82,14 @@ public class NoobCash {
         // InPeers inPeers;
         OutPeers outPeers;
         int my_port = (p == null) ? BS_PORT : Integer.parseInt(p);
+
         CliThread cliThread = new CliThread(my_port + 1, inQueue);
         cliThread.setDaemon(true);
         cliThread.start();
+
+        MinerThread minerThread = new MinerThread(inQueue);
+        minerThread.setDaemon(true);
+        minerThread.start();
 
         if (p == null) {
             myId = 0;
@@ -181,6 +187,7 @@ public class NoobCash {
         }
         LOGGER.info("Start main loop");
 
+        minerThread.mineBlock(0);
         Message msg;
         while(true) {
             try {
@@ -198,7 +205,7 @@ public class NoobCash {
                     case PeerInfo:
                         break;
                     case IdRequest:
-                        LOGGER.info("CLI requests id");
+                        LOGGER.info("CLI requested id, sending : " + myId);
                         cliThread.sendMessage(new Message(MessageType.PeerID, myId));
                         break;
                     case Ping:
@@ -207,6 +214,9 @@ public class NoobCash {
                         break;
                     case Pong:
                         LOGGER.finer("Got pong");
+                        break;
+                    case BlockMined:
+                        LOGGER.info("Mined new block!");
                         break;
                     default:
                         LOGGER.warning("Unexpected message : " + msg.messageType);

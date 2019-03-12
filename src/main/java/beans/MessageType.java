@@ -10,5 +10,6 @@ public enum MessageType {
     PeerInfo,
     IdRequest,
     Ping,
-    Pong
+    Pong,
+    BlockMined
 }
