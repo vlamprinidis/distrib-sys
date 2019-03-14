@@ -25,7 +25,7 @@ public class Transaction implements Serializable {
 
         sender_address = sender_publicKey;
         receiver_address = receiver_publicKey;
-        this.amount = receiverAmount;
+        amount = receiverAmount;
         transaction_inputs = in;
         timestamp = new Date().getTime();
 

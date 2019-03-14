@@ -44,13 +44,15 @@ public class Blockchain implements Serializable {
         myChain.add(block);
     }
 
-    public boolean validate_block(Block block){
+    //todo: validate_block in block
+    //todo: must validate every transaction as well, but validate_transaction here alters UTXOs, be careful
+    public boolean validate_block(HashMap<String,TransactionOutput> UTXOs, Block block){
         if(!block.verify_hash()) return false;
         Block previousBlock = myChain.get(myChain.size()-1);
         return previousBlock.getHash().equals(block.getPrevious_hash());
     }
 
-    public boolean validate_chain(ArrayList<Block> chain){
+    public boolean validate_chain(HashMap<String,TransactionOutput> UTXOs, ArrayList<Block> chain){
         try {
             ListIterator<Block> it = chain.listIterator();
             //Ignore genesis block
@@ -72,8 +74,9 @@ public class Blockchain implements Serializable {
         }
     }
 
-    public Transaction create_transaction(PublicKey receiver_publicKey, int receiverAmount){
-        int myBalance = wallet_balance(myWallet.getPublicKey());
+    public Transaction create_transaction(HashMap<String,TransactionOutput> UTXOs,
+                                          PublicKey receiver_publicKey, int receiverAmount){
+        int myBalance = wallet_balance(UTXOs, myWallet.getPublicKey());
         if( myBalance < receiverAmount) return null;
 
         ArrayList<String> myPreviousIds = getIds(UTXOs, myWallet.getPublicKey());
@@ -95,17 +98,21 @@ public class Blockchain implements Serializable {
     }
 
     //Verify the transaction's signature and check if its inputs are UTXOs and remove accordingly
-    public boolean validate_transaction(Transaction transaction){
+    public boolean validate_transaction(HashMap<String,TransactionOutput> UTXOs, Transaction transaction){
         try {
             if (!transaction.verifySignature()) return false;
-            //Check if every transaction input is in my UTXOs
+            ArrayList<String> senderPreviousIds = new ArrayList<>();
+
+            //Check if every transaction input is in my UTXOs and save their previousOutputIds
             for (TransactionInput tr : transaction.getTransaction_inputs()) {
                 String key = tr.getPreviousOutputId();
                 if (!UTXOs.containsKey(key)) return false;
+                senderPreviousIds.add(key);
             }
+
             //Remove all above ids from UTXOs
-            ArrayList<String> senderPreviousIds = getIds(UTXOs, transaction.getSender_address());
             if (!removeByIds(UTXOs, senderPreviousIds)) throw new Exception();
+
             //Now put the proper ones
             placeOutputs(UTXOs, transaction);
             return true;
@@ -117,7 +124,7 @@ public class Blockchain implements Serializable {
 
     }
 
-    public int wallet_balance(PublicKey publicKey){
+    public int wallet_balance(HashMap<String,TransactionOutput> UTXOs, PublicKey publicKey){
         int sum = 0;
         for (HashMap.Entry<String, TransactionOutput> entry : UTXOs.entrySet()) {
             TransactionOutput tr = entry.getValue();

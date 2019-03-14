@@ -23,7 +23,7 @@ public class Block implements Serializable {
         this.transactions = transactions;
         this.previous_hash = previous_hash;
         this.timestamp = new Date().getTime();
-        this.hash = this.calculateHash(giveData());
+        this.hash = null;
     }
 
     private String giveData(){
