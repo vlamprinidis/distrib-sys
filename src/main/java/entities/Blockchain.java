@@ -7,10 +7,6 @@ import java.security.PublicKey;
 import java.util.ArrayList;
 import java.util.HashMap;
 
-/**
- * Blockchain will be part a node-miner. It should be able to be sent to
- * a new miner joining the network
- */
 public class Blockchain implements Serializable {
 
     private static ArrayList<Block> myChain = new ArrayList<>();
@@ -72,16 +68,6 @@ public class Blockchain implements Serializable {
 
     }
 
-    private void placeOutputs(HashMap<String,TransactionOutput> UTXOs, Transaction transaction) {
-        TransactionOutput sender_out = transaction.getSender_out();
-        if(sender_out != null){
-            UTXOs.put(sender_out.getId(), sender_out);
-        }
-
-        TransactionOutput receiver_out = transaction.getReceiver_out();
-        UTXOs.put(receiver_out.getId(), receiver_out);
-    }
-
     public int wallet_balance(PublicKey publicKey){
         int sum = 0;
         for (HashMap.Entry<String, TransactionOutput> entry : UTXOs.entrySet()) {
@@ -91,6 +77,16 @@ public class Blockchain implements Serializable {
             }
         }
         return sum;
+    }
+
+    private void placeOutputs(HashMap<String,TransactionOutput> UTXOs, Transaction transaction) {
+        TransactionOutput sender_out = transaction.getSender_out();
+        if(sender_out != null){
+            UTXOs.put(sender_out.getId(), sender_out);
+        }
+
+        TransactionOutput receiver_out = transaction.getReceiver_out();
+        UTXOs.put(receiver_out.getId(), receiver_out);
     }
 
     //Give ids of the UTXOs that belong to given public key
