@@ -46,7 +46,7 @@ public class Transaction implements Serializable {
         String data="";
         if(transaction_inputs != null) {
             for (TransactionInput tr : transaction_inputs) {
-                data += tr.previousOutputId;
+                data += tr.getPreviousOutputId();
             }
         }
         data += sender_address;
