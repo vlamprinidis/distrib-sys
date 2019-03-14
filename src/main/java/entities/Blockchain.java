@@ -15,7 +15,7 @@ public class Blockchain implements Serializable {
     //private static int difficulty;
     private static int maxTransactionInBlock;
     private static HashMap<String,TransactionOutput> UTXOs;
-    private ArrayList<Transaction> currentTransactions;
+    private ArrayList<Transaction> tsxPool;
 
     public boolean isValid() throws Exception {
         return true;
@@ -25,7 +25,7 @@ public class Blockchain implements Serializable {
     public Blockchain(int max, Block genesisBlock){
         maxTransactionInBlock = max;
         myWallet = new Wallet();
-        currentTransactions = new ArrayList<>();
+        tsxPool = new ArrayList<>();
         myChain = new ArrayList<>();
         myChain.add(genesisBlock);
         UTXOs = new HashMap<>();
