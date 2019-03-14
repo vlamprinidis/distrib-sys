@@ -6,21 +6,70 @@ import java.io.Serializable;
 import java.security.PublicKey;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.ListIterator;
 
 public class Blockchain implements Serializable {
 
-    private static ArrayList<Block> myChain = new ArrayList<>();
+    private static ArrayList<Block> myChain;
     private static Wallet myWallet;
     //private static int difficulty;
     private static int maxTransactionInBlock;
-    private static HashMap<String,TransactionOutput> UTXOs = new HashMap<>();
+    private static HashMap<String,TransactionOutput> UTXOs;
+    private ArrayList<Transaction> currentTransactions;
 
     public boolean isValid() throws Exception {
         return true;
     }
 
-    public Blockchain(){
+    //todo: need to initialize UTXOs
+    public Blockchain(int max, Block genesisBlock){
+        maxTransactionInBlock = max;
         myWallet = new Wallet();
+        currentTransactions = new ArrayList<>();
+        myChain = new ArrayList<>();
+        myChain.add(genesisBlock);
+        UTXOs = new HashMap<>();
+    }
+
+    //Creates a new block and adds given transactions to it, provided they are as much as a block needs
+    public Block addToNewBlock(ArrayList<Transaction> transactions){
+        if(transactions.size() < maxTransactionInBlock) return null;
+        Block previousBlock = myChain.get(myChain.size()-1);
+        Block block = new Block(transactions, previousBlock.getHash(), previousBlock.getIndex()+1);
+        return block;
+    }
+
+    //Adds current block to chain, provided it is validated
+    public void addToChain(Block block){
+        myChain.add(block);
+    }
+
+    public boolean validate_block(Block block){
+        if(!block.verify_hash()) return false;
+        Block previousBlock = myChain.get(myChain.size()-1);
+        return previousBlock.getHash().equals(block.getPrevious_hash());
+    }
+
+    public boolean validate_chain(ArrayList<Block> chain){
+        try {
+            ListIterator<Block> it = chain.listIterator();
+            //Ignore genesis block
+            it.next();
+            Block previousBlock, currentBlock;
+            do{
+                previousBlock = it.previous();
+                it.next();
+                currentBlock = it.next();
+                if(!currentBlock.verify_hash()) return false;
+                if(!previousBlock.getHash().equals(currentBlock.getPrevious_hash())) return false;
+            }while (it.hasNext());
+
+            return true;
+        } catch(Exception e){
+            e.printStackTrace();
+            System.out.println("Something went wrong");
+            return  false;
+        }
     }
 
     public Transaction create_transaction(PublicKey receiver_publicKey, int receiverAmount){
@@ -134,5 +183,19 @@ public class Blockchain implements Serializable {
             e.printStackTrace();
             return false;
         }
+    }
+
+    //Getters here
+
+    public PublicKey giveMyPublicKey(){
+        return myWallet.getPublicKey();
+    }
+
+    public static int getMaxTransactionInBlock() {
+        return maxTransactionInBlock;
+    }
+
+    public static HashMap<String, TransactionOutput> getUTXOs() {
+        return UTXOs;
     }
 }
