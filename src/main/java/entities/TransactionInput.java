@@ -3,9 +3,13 @@ package entities;
 import java.io.Serializable;
 
 public class TransactionInput implements Serializable {
-    public String transactionOutputId; //Reference to TransactionOutputs -> transactionId
-    public TransactionOutput UTXO; //Contains the Unspent transaction output
+    private String previousOutputId; //Reference to TransactionOutputs -> transactionId
 
+    public TransactionInput(String previousOutputId){
+        this.previousOutputId = previousOutputId;
+    }
 
-
+    public String getPreviousOutputId() {
+        return previousOutputId;
+    }
 }
