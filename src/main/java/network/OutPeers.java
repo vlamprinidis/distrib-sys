@@ -28,6 +28,7 @@ public class OutPeers {
         for (int i = 1; i < peerInfos.length; i++) {
             if (i == myId) continue;
             thread = new ClientThread(peerInfos[i].address, peerInfos[i].port);
+            thread.setDaemon(true);
             thread.start();
             threads.put(i, thread);
         }

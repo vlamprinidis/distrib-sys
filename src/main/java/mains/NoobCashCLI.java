@@ -83,7 +83,7 @@ public class NoobCashCLI {
             LOGGER.severe("Message class not found");
             return;
         }
-        if (msg.messageType != MessageType.PeerID) {
+        if (msg.messageType != MessageType.IdAnswer) {
             LOGGER.severe("Instead of PeerId, got : " + msg.messageType);
             return;
         }

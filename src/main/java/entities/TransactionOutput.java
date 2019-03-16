@@ -7,34 +7,32 @@ import java.security.PublicKey;
 
 public class TransactionOutput implements Serializable {
 
+    private String parentTransactionId;
+    private PublicKey recipient;
+    private int amount;
     private String id;
-    private String parentTransactionId; //the id of the transaction this output was created in
-    private PublicKey recipient; //also known as the new owner of these coins.
-    private int amount; //the amount of coins they will get
 
-    public TransactionOutput(PublicKey recipient, int amount, String parentTransactionId){
+    public TransactionOutput(String parentTransactionId, PublicKey recipient, int amount){
+        this.parentTransactionId = parentTransactionId;
         this.recipient = recipient;
         this.amount = amount;
-        this.parentTransactionId = parentTransactionId;
-        this.id = calculateHash(giveData());
+        this.id = getHash();
     }
 
-    private String giveData(){
+    private String getStringData(){
         String data;
         data = parentTransactionId + recipient + amount;
         return data;
     }
 
-    private String calculateHash(String data) {
-        return StringUtilities.applySha256(data);
+    private String getHash() {
+        return StringUtilities.applySha256(getStringData());
     }
 
-    //Check if coin belongs to you
-    public boolean isMine(PublicKey publicKey) {
-        return publicKey == recipient;
+    public boolean belongsTo(PublicKey publicKey) {
+        return recipient == publicKey;
     }
 
-    //Getters here
 
     public String getId() {
         return id;

@@ -2,14 +2,14 @@ package entities;
 
 import java.io.Serializable;
 
-public class TransactionInput implements Serializable {
-    private String previousOutputId; //Reference to TransactionOutputs -> transactionId
+class TransactionInput implements Serializable {
+    private String previousOutputId;
 
-    public TransactionInput(String previousOutputId){
-        this.previousOutputId = previousOutputId;
+    TransactionInput(TransactionOutput transactionOutput){
+        this.previousOutputId = transactionOutput.getId();
     }
 
-    public String getPreviousOutputId() {
+    String getPreviousOutputId() {
         return previousOutputId;
     }
 }

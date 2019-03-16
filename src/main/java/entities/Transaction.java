@@ -7,103 +7,99 @@ import java.security.PrivateKey;
 import java.security.PublicKey;
 import java.util.ArrayList;
 import java.util.Date;
+import java.util.HashMap;
 
 public class Transaction implements Serializable {
-    private PublicKey sender_address;
-    private PublicKey receiver_address;
+    private PublicKey senderAddress;
+    private PublicKey receiverAddress;
     private int amount;
-    private String transaction_id;
-    private ArrayList<TransactionInput> transaction_inputs;
-    private TransactionOutput sender_out=null;
-    private TransactionOutput receiver_out;
-    private String signature;
     private long timestamp;
+    private ArrayList<TransactionInput> inputs;
+    private String txid;
+    private ArrayList<TransactionOutput> outputs;
+    private String signature;
 
-    public Transaction(
-            PublicKey sender_publicKey, PrivateKey sender_privateKey, ArrayList<TransactionInput> in, int senderBalance,
-            PublicKey receiver_publicKey, int receiverAmount){
-
-        sender_address = sender_publicKey;
-        receiver_address = receiver_publicKey;
-        amount = receiverAmount;
-        transaction_inputs = in;
+    public Transaction(PublicKey senderAddress, PublicKey receiverAddress, ArrayList<TransactionInput> inputs,
+                       int amount, int change){
+        this.senderAddress = senderAddress;
+        this.receiverAddress = receiverAddress;
+        this.amount = amount;
         timestamp = new Date().getTime();
-
-        String data = giveData();
-
-        transaction_id = calculateHash(data);
-
-        int leftOver = senderBalance - receiverAmount;
-        if(leftOver > 0) {
-            sender_out = new TransactionOutput(sender_publicKey, leftOver, transaction_id);
+        this.inputs = inputs;
+        txid = calculateHash();
+        outputs = new ArrayList<>();
+        outputs.add(new TransactionOutput(txid, receiverAddress, amount));
+        if (change > 0) {
+            outputs.add(new TransactionOutput(txid, senderAddress, change));
         }
-        receiver_out = new TransactionOutput(receiver_publicKey, receiverAmount, transaction_id);
-
-        signature = generateSignature(data, sender_privateKey);
     }
 
-    private String giveData(){
-        String data="";
-        if(transaction_inputs != null) {
-            for (TransactionInput tr : transaction_inputs) {
-                data += tr.getPreviousOutputId();
-            }
-        }
-        data += sender_address;
-        data += receiver_address;
+    private String getStringData(){
+        String data = "";
+        data += senderAddress;
+        data += receiverAddress;
         data += amount;
         data += timestamp;
+        for (TransactionInput tr : inputs) {
+            data += tr.getPreviousOutputId();
+        }
         return data;
     }
 
-    // This Calculates the transaction hash (which will be used as its Id)
-    private String calculateHash(String data) {
-        return StringUtilities.applySha256(data);
+    private String calculateHash() {
+        return StringUtilities.applySha256(getStringData());
     }
 
-    //Signs all the data we dont wish to be tampered with.
-    private String generateSignature(String data, PrivateKey privateKey) {
-       return StringUtilities.sign(data, privateKey);
+    public void sign(PrivateKey privateKey) {
+        signature = StringUtilities.sign(getStringData(), privateKey);
     }
 
-    //Verifies the data we signed hasn't been tampered with
     public boolean verifySignature() {
-        return StringUtilities.verify(giveData(), this.signature, sender_address);
+        return StringUtilities.verify(getStringData(), this.signature, senderAddress);
     }
 
-    //Getters here
-
-
-    public PublicKey getSender_address() {
-        return sender_address;
+    private boolean verifyTxid(){
+        return txid.equals(calculateHash());
     }
 
-    public PublicKey getReceiver_address() {
-        return receiver_address;
+    /*
+     * Verify that transaction is valid according to given UTXO
+     * Doesn't modify any structure
+     */
+    public boolean verify(HashMap<String, TransactionOutput> UTXOs) {
+        if (!(verifySignature() && verifyTxid())) return false;
+        int inSum = 0, outSum = 0;
+        for (TransactionInput input : inputs) {
+            TransactionOutput output = UTXOs.get(input.getPreviousOutputId());
+            if ((output == null) || (!output.belongsTo(senderAddress))) return false;
+            inSum += output.getAmount();
+        }
+        for (TransactionOutput output : outputs) {
+            if (!output.getParentTransactionId().equals(txid)) return false;
+            outSum += output.getAmount();
+        }
+        return inSum == outSum;
     }
 
-    public int getAmount() {
-        return amount;
+    /*
+     * Apply transaction to given UTXO
+     */
+    public void apply(HashMap<String, TransactionOutput> UTXOs) {
+        inputs.forEach(t -> UTXOs.remove(t.getPreviousOutputId()));
+        outputs.forEach(t -> UTXOs.put(t.getId(), t));
     }
 
-    public String getTransaction_id() {
-        return transaction_id;
+    public String getTxid() {
+        return txid;
     }
 
-    public ArrayList<TransactionInput> getTransaction_inputs() {
-        return transaction_inputs;
+    public ArrayList<TransactionInput> getInputs() {
+        return inputs;
     }
 
-    public TransactionOutput getSender_out() {
-        return sender_out;
+    public ArrayList<TransactionOutput> getOutputs() {
+        return outputs;
     }
 
-    public TransactionOutput getReceiver_out() {
-        return receiver_out;
-    }
-
-    public String getSignature() {
-        return signature;
-    }
 }
 

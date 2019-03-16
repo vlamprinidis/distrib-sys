@@ -1,51 +1,91 @@
 package beans;
 
 import entities.Transaction;
+import entities.TransactionOutput;
 import utilities.StringUtilities;
 
 import java.io.Serializable;
-import java.util.ArrayList;
 
 import java.util.Date;
+import java.util.HashMap;
+import java.util.List;
 
 public class Block implements Serializable {
 
     private int index;
     private long timestamp;
-    private ArrayList<Transaction> transactions;
+    private List<Transaction> transactions;
+    private String previousHash;
     private int nonce;
-    private String hash;
-    private String previous_hash;
+    private String currentHash;
 
-    public Block(ArrayList<Transaction> transactions, String previous_hash, int index){
-        this.nonce = 0;
+    public Block(int index, List<Transaction> transactions, String previousHash){
         this.index = index;
-        this.transactions = transactions;
-        this.previous_hash = previous_hash;
         this.timestamp = new Date().getTime();
-        this.hash = null;
+        this.transactions = transactions;
+        this.previousHash = previousHash;
     }
 
-    private String giveData(){
+    private String getStringData(){
         String data = "";
+        data += index;
+        data += timestamp;
         for(Transaction tr: transactions){
-            data += tr.getTransaction_id();
+            data += tr.getTxid();
         }
-        data = previous_hash +
-                timestamp +
-                nonce +
-                index +
-                data;
+        data += previousHash;
+        data += nonce;
 
         return data;
     }
 
-    private String calculateHash(String data) {
-        return StringUtilities.applySha256(data);
+    private String calculateHash() {
+        return StringUtilities.applySha256(getStringData());
     }
 
-    public boolean verify_hash(){
-        return calculateHash(giveData()).equals(hash);
+    public void hash() {
+        this.currentHash = calculateHash();
+    }
+
+    public boolean tryMine(int nonce, int difficulty) {
+        this.nonce = nonce;
+        this.currentHash = calculateHash();
+        return verifyNonce(difficulty);
+    }
+
+    public boolean isGenesis() {
+        return this.index == 0 && "1".equals(this.previousHash) && this.nonce == 0 && this.transactions.size() == 1 && verifyHash();
+    }
+
+    /*
+     * Check if correct PoW
+     */
+    public boolean verifyNonce(int difficulty) {
+        return currentHash.substring(0, difficulty).equals(new String(new char[difficulty]).replace('\0', '0'));
+    }
+
+    public boolean verifyHash(){
+        return calculateHash().equals(currentHash);
+    }
+
+    public void setNonce(int nonce) {
+        this.nonce = nonce;
+    }
+
+    public boolean verifyStructure(int index, int blockSize, String previousHash, int difficulty) {
+        return this.index == index && transactions.size() == blockSize && this.previousHash.equals(previousHash) && verifyNonce(difficulty) && verifyHash();
+    }
+
+    /*
+     * Verify and apply every transaction modifying given UTXOs accordingly
+     * Return false if invalid transaction found
+     */
+    public boolean verifyApplyTransactions(HashMap<String, TransactionOutput> UTXOs) {
+        for (Transaction transaction : transactions) {
+            if (!transaction.verify(UTXOs)) return false;
+            transaction.apply(UTXOs);
+        }
+        return true;
     }
 
     /*public void mineBlock(int difficulty) {
@@ -67,7 +107,7 @@ public class Block implements Serializable {
         return timestamp;
     }
 
-    public ArrayList<Transaction> getTransactions() {
+    public List<Transaction> getTransactions() {
         return transactions;
     }
 
@@ -75,11 +115,11 @@ public class Block implements Serializable {
         return nonce;
     }
 
-    public String getHash() {
-        return hash;
+    public String getCurrentHash() {
+        return currentHash;
     }
 
-    public String getPrevious_hash() {
-        return previous_hash;
+    public String getPreviousHash() {
+        return previousHash;
     }
 }

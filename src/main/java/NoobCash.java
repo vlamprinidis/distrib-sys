@@ -11,6 +11,7 @@ public class NoobCash {
     public static Wallet walletB;
 
     public static void main(String[] args) {
+        /*
         walletA = new Wallet();
         walletB = new Wallet();
         //Test public and private keys
@@ -23,7 +24,7 @@ public class NoobCash {
         //Verify the signature works and verify it from the public key
         System.out.println("Is signature verified");
         System.out.println(transaction.verifySignature());
-
+        */
 
     }
 }
