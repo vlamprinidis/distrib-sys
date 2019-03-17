@@ -10,6 +10,7 @@ application {
 task cli(type: JavaExec) {
     main = "mains.NoobCashCLI"
     classpath = sourceSets.main.runtimeClasspath
+    standardInput = System.in
 }
 
 version '1.0-SNAPSHOT'

@@ -249,8 +249,13 @@ public class NoobCash {
             switch (msg.messageType) {
                 case IdRequest:
                     LOGGER.info("CLI requested id, sending : " + myId);
-                    cliThread.sendMessage(new Message(MessageType.IdAnswer, myId));
+                    cliThread.sendMessage(new Message(MessageType.IdResponse, myId));
                     break;
+                case BalanceRequest:
+                    Integer x = msg.data == null ? myId : (Integer) msg.data;
+                    LOGGER.info("CLI request balance of : " + x);
+                    cliThread.sendMessage(new Message(MessageType.BalanceResponse,
+                            blockchain.getBalance(peers[x].publicKey)));
                 case Ping:
                     outPeers.broadcast(new Message(MessageType.Pong, msg.data));
                     LOGGER.finer("Got ping");

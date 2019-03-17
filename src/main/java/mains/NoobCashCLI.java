@@ -13,7 +13,7 @@ import java.util.logging.*;
 public class NoobCashCLI {
     private static final Logger LOGGER = Logger.getLogger("NOOBCASH");
     @SuppressWarnings("Duplicates")
-    public static void main(String[] args) {
+    public static void main(String[] args) throws ClassNotFoundException {
         Options options = new Options();
         Option port_opt = new Option("p", "port", true, "server port");
         port_opt.setRequired(true);
@@ -76,50 +76,73 @@ public class NoobCashCLI {
             oos.writeObject(new Message(MessageType.IdRequest, null));
             ois = new ObjectInputStream(socket.getInputStream());
             msg = (Message) ois.readObject();
-        } catch (IOException e) {
-            LOGGER.log(Level.SEVERE, e.toString(), e);
-            return;
-        } catch (ClassNotFoundException e) {
-            LOGGER.severe("Message class not found");
+        } catch (IOException e){
+            LOGGER.severe("Couldn't write-read id messages");
             return;
         }
-        if (msg.messageType != MessageType.IdAnswer) {
+        if (msg.messageType != MessageType.IdResponse) {
             LOGGER.severe("Instead of PeerId, got : " + msg.messageType);
             return;
         }
         int id = (Integer) msg.data;
         LOGGER.info("Got backend id : " + id);
 
-        File file = new File("./transactions/5nodes/transactions" + id + ".txt");
-        BufferedReader reader;
-        try {
-            reader = new BufferedReader(new FileReader(file));
-        } catch (FileNotFoundException e) {
-            LOGGER.severe("Couldn't open transactions file");
-            return;
-        }
-        String text;
+        String line;
+        System.out.println("ok");
+        BufferedReader consoleReader = new BufferedReader(new InputStreamReader(System.in));
+        System.out.println("ok!");
+
 
         while (true) {
+            System.out.print("# ");
             try {
-                if ((text = reader.readLine()) == null) break;
+                line = consoleReader.readLine();
             } catch (IOException e) {
-                LOGGER.log(Level.SEVERE, e.toString(), e);
+                LOGGER.log(Level.SEVERE, "Couldn't read line", e);
                 return;
             }
-            LOGGER.finest("Sending message to backend");
-            try {
-                oos.writeObject(new Message(MessageType.Ping, text));
-            } catch (IOException e) {
-                LOGGER.severe("Couldn't send message to backend");
-                return;
+            LOGGER.finest("Processing command : " + line);
+            if (line.trim().isEmpty()) continue;
+            String[] tokens = line.trim().split(" ");
+            switch (tokens[0]) {
+                case "t":
+                    System.out.print("New tsx cmd");
+                    break;
+                case "view":
+                    System.out.println("View tsxs");
+                    break;
+                case "balance":
+                    Integer x = tokens.length > 1 ? Integer.parseInt(tokens[1]) : null;
+                    try{
+                        oos.writeObject(new Message(MessageType.BalanceRequest, x));
+                        msg = (Message) ois.readObject();
+                    } catch (IOException e) {
+                        LOGGER.severe("Couldn't write-read balance messages");
+                        return;
+                    }
+                    if (msg.messageType != MessageType.BalanceResponse) {
+                        LOGGER.severe("Instead of BalanceResponse, got : " + msg.messageType);
+                        return;
+                    }
+                    System.out.println(msg.data + " coins" );
+                    break;
+                case "file":
+                    File file = new File("./transactions/5nodes/transactions" + id + ".txt");
+                    BufferedReader fileReader;
+                    try {
+                        fileReader = new BufferedReader(new FileReader(file));
+                    } catch (FileNotFoundException e) {
+                        LOGGER.severe("Couldn't open transactions file");
+                        return;
+                    }
+                    System.out.println("*send file cmd's to backedn*");
+                    break;
+                case "q":
+                    LOGGER.info("Bye !");
+                    return;
+                default:
+                    System.out.println("Sorry, what?");
             }
         }
-
-        try {
-            Thread.sleep(100000);
-        } catch (InterruptedException ignored) {
-        }
-
     }
 }

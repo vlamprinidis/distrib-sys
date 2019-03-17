@@ -6,9 +6,11 @@ package beans;
  */
 public enum MessageType {
     IdRequest,
-    IdAnswer,
+    IdResponse,
     PeerJoin,
     JoinAnswer,
+    BalanceRequest,
+    BalanceResponse,
     Ping,
     Pong,
     BlockMined,

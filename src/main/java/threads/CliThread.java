@@ -15,7 +15,7 @@ public class CliThread extends Thread {
     private static final Logger LOGGER = Logger.getLogger("NOOBCASH");
     private int port;
     private BlockingQueue<Message> queue;
-    private Socket socket;
+    private ObjectOutputStream oos;
 
     public CliThread(int port, BlockingQueue<Message> queue) {
         this.port = port;
@@ -36,8 +36,8 @@ public class CliThread extends Thread {
         try {
             Socket socket = serverSocket.accept();
             serverSocket.close();
-            this.socket = socket;
             ois = new ObjectInputStream(socket.getInputStream());
+            oos = new ObjectOutputStream(socket.getOutputStream());
         } catch (IOException e) {
             LOGGER.log(Level.SEVERE, e.toString(), e);
             System.exit(1);
@@ -60,7 +60,6 @@ public class CliThread extends Thread {
 
     public void sendMessage(Message msg) {
         try {
-            ObjectOutputStream oos = new ObjectOutputStream(socket.getOutputStream());
             oos.writeObject(msg);
         } catch (IOException e) {
             LOGGER.log(Level.SEVERE, e.toString(), e);
