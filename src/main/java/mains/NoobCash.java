@@ -107,8 +107,11 @@ public class NoobCash {
         if (isBootstrap) {
             Block genesisBlock = blockchain.generateGenesis(networkSize);
             assert genesisBlock.isGenesis();
-            blockchain.addBlock(genesisBlock);
-            assert blockchain.getUTXOs().isEmpty();
+            // block created, not confirmed := added to chain
+            if (!blockchain.addBlock(genesisBlock)) {
+                LOGGER.severe("Couldn't add genesis block to chain !?");
+                return;
+            }
 
             myId = 0;
             peers = new PeerInfo[networkSize];
@@ -156,31 +159,27 @@ public class NoobCash {
                 }
             }
             LOGGER.info("All peers have joined");
-            int ind = 1;
             int difficulty = blockchain.getDifficulty();
-            int blockSize = blockchain.getBlockSize();
-            String prevHash = genesisBlock.getCurrentHash();
             while(blockchain.isFull()) {
                 Block block = blockchain.createBlock();
                 int nonce = 0;
                 while(!block.tryMine(nonce, difficulty)) nonce++;
-                if (!block.verifyStructure(ind++, blockSize, prevHash, difficulty)) {
-                    LOGGER.severe("Couldn't verify my own chain :(");
+                LOGGER.info("Nonce : " + block.getNonce());
+                if(!blockchain.addBlock(block)) {
+                    LOGGER.severe("Couldn't add my own block to chain !?");
                     return;
                 }
-                LOGGER.info("Nonce : " + block.getNonce());
-                prevHash = block.getCurrentHash();
-                blockchain.addBlock(block);
             }
 
             for(int j = 1; j < networkSize; j++){
                 ObjectOutputStream oos;
                 try {
                     oos = new ObjectOutputStream(peers[j].server_socket.getOutputStream());
-                    JoinAnswerData data = new JoinAnswerData(j, peers, blockchain.getChain(), blockchain.getTsxPool());
+                    JoinAnswerData data = new JoinAnswerData(j, peers, blockchain.getChain(),
+                            blockchain.getTsxPool(), blockchain.getGenesisUTXO());
                     oos.writeObject(new Message(MessageType.JoinAnswer, data));
                 } catch (IOException e) {
-                    LOGGER.log(Level.SEVERE, e.toString(), e);
+                    LOGGER.severe("Couldn't send initial data to peer");
                     return;
                 }
             }
@@ -215,12 +214,13 @@ public class NoobCash {
                 peers = data.peerInfo;
 
                 blockchain.setTsxPool(data.tsxPool);
-                // manually set initial pending transactions
+                blockchain.setGenesisUTXO(data.genesisUTXO);
+                // manually set initial pending transactions and genesisUTXO
                 if (!blockchain.replaceChain(data.chain)) {
                     LOGGER.severe("Bootstrap sent invalid chain ?!");
                     return;
                 }
-                LOGGER.info("Got initial data");
+                LOGGER.info("Got and validated initial data");
 
             } catch (IOException e) {
                 LOGGER.log(Level.SEVERE, e.toString(), e);
@@ -228,13 +228,10 @@ public class NoobCash {
             }
             outPeers = new OutPeers(peers, socket, myId);
         }
-        for (int i = 0; i < networkSize; i++) {
-            System.out.println("Peer with id = " + i + " has " + blockchain.getBalance(peers[i].publicKey) + " coins");
-        }
 
         LOGGER.info("Main loop started");
 
-        minerThread.mineBlock(0);
+        // minerThread.mineBlock(0);
         Message msg;
         while(true) {
             try {
@@ -248,12 +245,12 @@ public class NoobCash {
 
             switch (msg.messageType) {
                 case IdRequest:
-                    LOGGER.info("CLI requested id, sending : " + myId);
+                    LOGGER.finer("CLI requested id, sending : " + myId);
                     cliThread.sendMessage(new Message(MessageType.IdResponse, myId));
                     break;
                 case BalanceRequest:
-                    Integer x = msg.data == null ? myId : (Integer) msg.data;
-                    LOGGER.info("CLI request balance of : " + x);
+                    int x = msg.data == null ? myId : (Integer) msg.data;
+                    LOGGER.finer("CLI request balance of : " + x);
                     cliThread.sendMessage(new Message(MessageType.BalanceResponse,
                             blockchain.getBalance(peers[x].publicKey)));
                 case Ping:

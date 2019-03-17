@@ -8,6 +8,7 @@ import java.security.PublicKey;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
+import java.util.Objects;
 
 public class Transaction implements Serializable {
     private PublicKey senderAddress;
@@ -19,7 +20,7 @@ public class Transaction implements Serializable {
     private ArrayList<TransactionOutput> outputs;
     private String signature;
 
-    public Transaction(PublicKey senderAddress, PublicKey receiverAddress, ArrayList<TransactionInput> inputs,
+    Transaction(PublicKey senderAddress, PublicKey receiverAddress, ArrayList<TransactionInput> inputs,
                        int amount, int change){
         this.senderAddress = senderAddress;
         this.receiverAddress = receiverAddress;
@@ -40,6 +41,7 @@ public class Transaction implements Serializable {
         data += receiverAddress;
         data += amount;
         data += timestamp;
+        // TODO : replace string concatenation with string builder
         for (TransactionInput tr : inputs) {
             data += tr.getPreviousOutputId();
         }
@@ -50,11 +52,11 @@ public class Transaction implements Serializable {
         return StringUtilities.applySha256(getStringData());
     }
 
-    public void sign(PrivateKey privateKey) {
+    void sign(PrivateKey privateKey) {
         signature = StringUtilities.sign(getStringData(), privateKey);
     }
 
-    public boolean verifySignature() {
+    private boolean verifySignature() {
         return StringUtilities.verify(getStringData(), this.signature, senderAddress);
     }
 
@@ -82,7 +84,8 @@ public class Transaction implements Serializable {
     }
 
     /*
-     * Apply transaction to given UTXO
+     * Apply a transaction to given UTXOs
+     * No validation at all
      */
     public void apply(HashMap<String, TransactionOutput> UTXOs) {
         inputs.forEach(t -> UTXOs.remove(t.getPreviousOutputId()));
@@ -93,13 +96,17 @@ public class Transaction implements Serializable {
         return txid;
     }
 
-    public ArrayList<TransactionInput> getInputs() {
-        return inputs;
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        Transaction that = (Transaction) o;
+        return txid.equals(that.txid);
     }
 
-    public ArrayList<TransactionOutput> getOutputs() {
-        return outputs;
+    @Override
+    public int hashCode() {
+        return Objects.hash(txid);
     }
-
 }
 

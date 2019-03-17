@@ -25,7 +25,7 @@ public class Wallet implements Serializable {
         return publicKey;
     }
 
-    public PrivateKey getPrivateKey() {
+    PrivateKey getPrivateKey() {
         return privateKey;
     }
 }

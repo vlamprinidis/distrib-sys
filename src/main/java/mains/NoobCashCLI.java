@@ -37,10 +37,12 @@ public class NoobCashCLI {
         LOGGER.setUseParentHandlers(false);
         LOGGER.setLevel(Level.ALL);
 
+        /*
         ConsoleHandler consoleHandler = new ConsoleHandler();
         consoleHandler.setFormatter(new SimpleFormatter());
         consoleHandler.setLevel(Level.INFO);
         LOGGER.addHandler(consoleHandler);
+        */
 
         FileHandler fileHandler;
         try {
@@ -49,7 +51,8 @@ public class NoobCashCLI {
             fileHandler.setLevel(Level.ALL);
             LOGGER.addHandler(fileHandler);
         } catch (IOException e) {
-            LOGGER.log(Level.WARNING, e.toString(), e);
+            e.printStackTrace();
+            System.exit(1);
         }
 
         InetAddress serverAddress;
@@ -59,6 +62,8 @@ public class NoobCashCLI {
             LOGGER.severe("Couldn't find backend address");
             return;
         }
+
+        System.out.println("NoobCash cli ");
 
         Socket socket;
         ObjectInputStream ois;
@@ -88,9 +93,7 @@ public class NoobCashCLI {
         LOGGER.info("Got backend id : " + id);
 
         String line;
-        System.out.println("ok");
         BufferedReader consoleReader = new BufferedReader(new InputStreamReader(System.in));
-        System.out.println("ok!");
 
 
         while (true) {
@@ -105,6 +108,9 @@ public class NoobCashCLI {
             if (line.trim().isEmpty()) continue;
             String[] tokens = line.trim().split(" ");
             switch (tokens[0]) {
+                case "help":
+                    System.out.println("*helpful message*");
+                    break;
                 case "t":
                     System.out.print("New tsx cmd");
                     break;

@@ -12,7 +12,7 @@ public class TransactionOutput implements Serializable {
     private int amount;
     private String id;
 
-    public TransactionOutput(String parentTransactionId, PublicKey recipient, int amount){
+    TransactionOutput(String parentTransactionId, PublicKey recipient, int amount){
         this.parentTransactionId = parentTransactionId;
         this.recipient = recipient;
         this.amount = amount;
@@ -29,24 +29,20 @@ public class TransactionOutput implements Serializable {
         return StringUtilities.applySha256(getStringData());
     }
 
-    public boolean belongsTo(PublicKey publicKey) {
+    boolean belongsTo(PublicKey publicKey) {
         return recipient == publicKey;
     }
 
 
-    public String getId() {
+    String getId() {
         return id;
     }
 
-    public String getParentTransactionId() {
+    String getParentTransactionId() {
         return parentTransactionId;
     }
 
-    public PublicKey getRecipient() {
-        return recipient;
-    }
-
-    public int getAmount() {
+    int getAmount() {
         return amount;
     }
 }

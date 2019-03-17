@@ -30,6 +30,7 @@ public class Block implements Serializable {
         String data = "";
         data += index;
         data += timestamp;
+        // TODO : replace string concatenation with string builder
         for(Transaction tr: transactions){
             data += tr.getTxid();
         }
@@ -60,11 +61,11 @@ public class Block implements Serializable {
     /*
      * Check if correct PoW
      */
-    public boolean verifyNonce(int difficulty) {
+    private boolean verifyNonce(int difficulty) {
         return currentHash.substring(0, difficulty).equals(new String(new char[difficulty]).replace('\0', '0'));
     }
 
-    public boolean verifyHash(){
+    private boolean verifyHash(){
         return calculateHash().equals(currentHash);
     }
 
@@ -72,8 +73,8 @@ public class Block implements Serializable {
         this.nonce = nonce;
     }
 
-    public boolean verifyStructure(int index, int blockSize, String previousHash, int difficulty) {
-        return this.index == index && transactions.size() == blockSize && this.previousHash.equals(previousHash) && verifyNonce(difficulty) && verifyHash();
+    public boolean verifyStructure(int blockSize, int difficulty) {
+        return transactions.size() == blockSize && verifyNonce(difficulty) && verifyHash();
     }
 
     /*
@@ -88,23 +89,8 @@ public class Block implements Serializable {
         return true;
     }
 
-    /*public void mineBlock(int difficulty) {
-        String target = new String(new char[difficulty]).replace('\0', '0'); //Create a string with difficulty * "0"
-        while(!this.current_hash.substring( 0, difficulty).equals(target)) {
-            this.nonce ++;
-            this.current_hash = calculateHash();
-        }
-        System.out.println("Block Mined!!! : " + this.current_hash);
-    }*/
-
-    //Getters here
-
     public int getIndex() {
         return index;
-    }
-
-    public long getTimestamp() {
-        return timestamp;
     }
 
     public List<Transaction> getTransactions() {
