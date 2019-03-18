@@ -1,8 +1,7 @@
 package beans;
 
 /*
- * todo : Create different types of messages that will be sent
- * to handle any different cases
+ * Message tags
  */
 public enum MessageType {
     IdRequest,

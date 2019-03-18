@@ -5,7 +5,6 @@ import beans.Message;
 import beans.MessageType;
 import network.PeerInfo;
 import org.apache.commons.cli.*;
-import utilities.StringUtilities;
 
 import java.io.*;
 import java.net.InetAddress;

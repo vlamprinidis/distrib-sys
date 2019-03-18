@@ -1,9 +1,7 @@
 package threads;
 
-import beans.Block;
 import beans.Message;
 import beans.MessageType;
-import entities.Transaction;
 
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
@@ -23,6 +21,7 @@ public class MinerThread extends Thread{
         this.inQueue = new LinkedBlockingQueue<>();
     }
 
+    @SuppressWarnings("InfiniteLoopStatement")
     @Override
     public void run() {
 

@@ -13,6 +13,7 @@ import java.net.ServerSocket;
 import java.net.Socket;
 import java.net.UnknownHostException;
 import java.security.NoSuchAlgorithmException;
+import java.util.Random;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingDeque;
 import java.util.logging.*;
@@ -94,7 +95,7 @@ public class NoobCash {
             LOGGER.severe("Couldn't generate key pair");
             return;
         }
-        Blockchain blockchain = new Blockchain(wallet, 1, 3);
+        Blockchain blockchain = new Blockchain(wallet, 4, 3);
 
         CliThread cliThread = new CliThread(myPort + 1, inQueue);
         cliThread.setDaemon(true);
@@ -162,8 +163,11 @@ public class NoobCash {
             int difficulty = blockchain.getDifficulty();
             while(blockchain.isFull()) {
                 Block block = blockchain.createBlock();
-                int nonce = 0;
-                while(!block.tryMine(nonce, difficulty)) nonce++;
+                Random randomStream = new Random();
+                // Explicit to avoid warnings
+                while(true) {
+                    if (block.tryMine(randomStream.nextInt(), difficulty)) break;
+                }
                 LOGGER.info("Nonce : " + block.getNonce());
                 if(!blockchain.addBlock(block)) {
                     LOGGER.severe("Couldn't add my own block to chain !?");
@@ -171,8 +175,8 @@ public class NoobCash {
                 }
             }
 
-            LOGGER.info("Conf UTXOs size : " + blockchain.getConfirmedUTXOs().size());
-            LOGGER.info("Unonf UTXOs size : " + blockchain.getUnconfirmedUTXOs().size());
+            LOGGER.info("Confirmed UTXOs size : " + blockchain.getConfirmedUTXOs().size());
+            LOGGER.info("Unconfirmed UTXOs size : " + blockchain.getUnconfirmedUTXOs().size());
 
             for(int j = 1; j < networkSize; j++){
                 ObjectOutputStream oos;
@@ -216,19 +220,22 @@ public class NoobCash {
                 myId = data.id;
                 peers = data.peerInfo;
 
-                // Add genesisUTXO (= input of first TSX that gives BS coins)
+                // Manually set genesisUTXO (= input of first TSX that gives BS coins)
                 blockchain.setGenesisUTXO(data.genesisUTXO);
-                // Build initial chain, pool, UTXOs
-                LOGGER.info("Initial pool size : " + data.tsxPool.size());
-                blockchain.setTsxPool(data.tsxPool);
-                // manually set initial pending transactions and genesisUTXO
+
                 if (!blockchain.replaceChain(data.chain)) {
                     LOGGER.severe("Bootstrap sent invalid chain ?!");
                     return;
                 }
-                LOGGER.info("Conf UTXOs size : " + blockchain.getConfirmedUTXOs().size());
-                LOGGER.info("Unonf UTXOs size : " + blockchain.getUnconfirmedUTXOs().size());
-                LOGGER.info("Got and validated initial data");
+
+                // Pretend that you received initial unconfirmed transaction, adding each one
+                for (Transaction t : data.tsxPool) {
+                    if (!blockchain.verifyApplyTransaction(t)) {
+                        LOGGER.severe("Couldn't initial unconfirmed transactions !?");
+                        return;
+                    }
+                }
+                LOGGER.info("Got and validated all initial data");
 
             } catch (IOException e) {
                 LOGGER.log(Level.SEVERE, e.toString(), e);

@@ -1,13 +1,12 @@
 package beans;
 
 import entities.Transaction;
-import entities.TransactionOutput;
+import entities.UTXOs;
 import utilities.StringUtilities;
 
 import java.io.Serializable;
 
 import java.util.Date;
-import java.util.HashMap;
 import java.util.List;
 
 public class Block implements Serializable {
@@ -27,17 +26,16 @@ public class Block implements Serializable {
     }
 
     private String getStringData(){
-        String data = "";
-        data += index;
-        data += timestamp;
-        // TODO : replace string concatenation with string builder
+        StringBuilder data = new StringBuilder();
+        data.append(index);
+        data.append(timestamp);
         for(Transaction tr: transactions){
-            data += tr.getTxid();
+            data.append(tr.getTxid());
         }
-        data += previousHash;
-        data += nonce;
+        data.append(previousHash);
+        data.append(nonce);
 
-        return data;
+        return data.toString();
     }
 
     private String calculateHash() {
@@ -81,10 +79,10 @@ public class Block implements Serializable {
      * Verify and apply every transaction modifying given UTXOs accordingly
      * Return false if invalid transaction found
      */
-    public boolean verifyApplyTransactions(HashMap<String, TransactionOutput> UTXOs) {
+    public boolean verifyApplyTransactions(UTXOs utxOs) {
         for (Transaction transaction : transactions) {
-            if (!transaction.verify(UTXOs)) return false;
-            transaction.apply(UTXOs);
+            if (!transaction.verify(utxOs)) return false;
+            transaction.apply(utxOs);
         }
         return true;
     }

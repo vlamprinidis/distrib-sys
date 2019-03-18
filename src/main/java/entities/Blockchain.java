@@ -7,7 +7,6 @@ import java.security.PublicKey;
 import java.util.*;
 import java.util.logging.Logger;
 
-import static utilities.StringUtilities.publicKeyToString;
 
 public class Blockchain implements Serializable {
 
@@ -15,8 +14,8 @@ public class Blockchain implements Serializable {
     private ArrayList<Block> chain;
     private Wallet wallet;
     private LinkedList<Transaction> tsxPool;
-    private HashMap<String,TransactionOutput> confirmedUTXOs;
-    private HashMap<String,TransactionOutput> unconfirmedUTXOs;
+    private UTXOs confirmedUTXOs;
+    private UTXOs unconfirmedUTXOs;
     private TransactionOutput genesisUTXO;
     private static int difficulty;
     private static int blockSize;
@@ -24,8 +23,8 @@ public class Blockchain implements Serializable {
     public Blockchain(Wallet wallet, int blockSize, int difficulty) {
         chain = new ArrayList<>();
         this.wallet = wallet;
-        confirmedUTXOs = new HashMap<>();
-        unconfirmedUTXOs = new HashMap<>();
+        confirmedUTXOs = new UTXOs();
+        unconfirmedUTXOs = new UTXOs();
         tsxPool = new LinkedList<>();
         Blockchain.difficulty = difficulty;
         Blockchain.blockSize = blockSize;
@@ -36,8 +35,8 @@ public class Blockchain implements Serializable {
 
         TransactionOutput genesisUTXO = new TransactionOutput(null, publicKey, 100* networkSize);
         this.genesisUTXO = genesisUTXO;
-        confirmedUTXOs.put(genesisUTXO.getId(), genesisUTXO);
-        unconfirmedUTXOs = new HashMap<>(confirmedUTXOs);
+        confirmedUTXOs.add(genesisUTXO);
+        unconfirmedUTXOs = new UTXOs(confirmedUTXOs);
 
         Transaction genesisTSX = createTransaction(publicKey, 100* networkSize);
         // yes, send money to myself, from myself
@@ -66,8 +65,8 @@ public class Blockchain implements Serializable {
      * If invalid, return false and don't change anything
      */
     public boolean replaceChain(ArrayList<Block> newChain) {
-        HashMap<String, TransactionOutput> newConfirmedUTXOs = new HashMap<>();
-        newConfirmedUTXOs.put(genesisUTXO.getId(), genesisUTXO);
+        UTXOs newConfirmedUTXOs = new UTXOs();
+        newConfirmedUTXOs.add(genesisUTXO);
         // start with just genesis UTXO
 
         ArrayList<Block> myNewChain = new ArrayList<>();
@@ -112,10 +111,9 @@ public class Blockchain implements Serializable {
     /*
      * Builds unconfirmed UTXOs (= confirmed.apply(tsxPool)), dropping now invalid pool transactions
      */
-    private static HashMap<String, TransactionOutput> buildUnconfirmedUTXOs (HashMap<String, TransactionOutput> confirmedUTXOs,
-                                                                     LinkedList<Transaction> tsxPool) {
+    private static UTXOs buildUnconfirmedUTXOs (UTXOs confirmedUTXOs, LinkedList<Transaction> tsxPool) {
 
-        HashMap<String, TransactionOutput> unconfirmedUTXOs = new HashMap<>(confirmedUTXOs);
+        UTXOs unconfirmedUTXOs = new UTXOs(confirmedUTXOs);
         for(ListIterator<Transaction> it = tsxPool.listIterator(); it.hasNext(); ) {
             Transaction t = it.next();
             if (!t.verify(unconfirmedUTXOs)) {
@@ -135,8 +133,8 @@ public class Blockchain implements Serializable {
      * Return false if something is invalid
      * Modifies given UTXOs either way
      */
-    private static boolean addBlock(Block block, ArrayList<Block> chain,
-                                   HashMap<String, TransactionOutput> confirmedUTXOs){
+    @SuppressWarnings("BooleanMethodIsAlwaysInverted")
+    private static boolean addBlock(Block block, ArrayList<Block> chain, UTXOs confirmedUTXOs){
         // Check order and structure
         if (chain.isEmpty()) {
             if (!block.isGenesis()) {
@@ -170,8 +168,9 @@ public class Blockchain implements Serializable {
      * If valid, add it, remove block's transactions from pool and
      * re-apply, if possible, remaining pool transactions to unconfirmed UTXOs
      */
+    @SuppressWarnings("BooleanMethodIsAlwaysInverted")
     public boolean addBlock(Block block) {
-        HashMap<String, TransactionOutput> newConfirmedUTXOs = new HashMap<>(confirmedUTXOs);
+        UTXOs newConfirmedUTXOs = new UTXOs(confirmedUTXOs);
         // Copy to avoid custom rollback
 
         if(!addBlock(block, chain, newConfirmedUTXOs)) {
@@ -217,11 +216,10 @@ public class Blockchain implements Serializable {
         PublicKey sender = wallet.getPublicKey();
         ArrayList<TransactionInput> inputs = new ArrayList<>();
         int sum = 0;
-        for (HashMap.Entry<String, TransactionOutput> entry : unconfirmedUTXOs.entrySet()) {
-            TransactionOutput tr = entry.getValue();
-            if(tr.belongsTo(sender)) {
-                sum += tr.getAmount();
-                inputs.add(new TransactionInput(tr));
+        for(TransactionOutput output : unconfirmedUTXOs.values()){
+            if(output.belongsTo(sender)) {
+                sum += output.getAmount();
+                inputs.add(new TransactionInput(output));
             }
             if (sum >= amount) break;
         }
@@ -239,10 +237,9 @@ public class Blockchain implements Serializable {
      */
     public int getBalance(PublicKey publicKey){
         int sum = 0;
-        for (HashMap.Entry<String, TransactionOutput> entry : unconfirmedUTXOs.entrySet()) {
-            TransactionOutput tr = entry.getValue();
-            if (tr.belongsTo(publicKey)){
-                sum += tr.getAmount();
+        for (TransactionOutput output : unconfirmedUTXOs.values()){
+            if (output.belongsTo(publicKey)){
+                sum += output.getAmount();
             }
         }
         return sum;
@@ -260,11 +257,11 @@ public class Blockchain implements Serializable {
         return chain;
     }
 
-    public HashMap<String, TransactionOutput> getConfirmedUTXOs() {
+    public UTXOs getConfirmedUTXOs() {
         return confirmedUTXOs;
     }
 
-    public HashMap<String, TransactionOutput> getUnconfirmedUTXOs() {
+    public UTXOs getUnconfirmedUTXOs() {
         return unconfirmedUTXOs;
     }
 
@@ -274,10 +271,6 @@ public class Blockchain implements Serializable {
 
     public LinkedList<Transaction> getTsxPool() {
         return tsxPool;
-    }
-
-    public void setTsxPool(LinkedList<Transaction> tsxPool) {
-        this.tsxPool = tsxPool;
     }
 
 }

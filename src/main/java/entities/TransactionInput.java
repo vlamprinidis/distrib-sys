@@ -1,15 +1,16 @@
 package entities;
 
 import java.io.Serializable;
+import java.util.UUID;
 
 class TransactionInput implements Serializable {
-    private String previousOutputId;
+    private UUID previousOutputId;
 
     TransactionInput(TransactionOutput transactionOutput){
         this.previousOutputId = transactionOutput.getId();
     }
 
-    String getPreviousOutputId() {
+    UUID getPreviousOutputId() {
         return previousOutputId;
     }
 }

@@ -7,7 +7,6 @@ import java.security.PrivateKey;
 import java.security.PublicKey;
 import java.util.ArrayList;
 import java.util.Date;
-import java.util.HashMap;
 import java.util.Objects;
 import java.util.logging.Logger;
 
@@ -39,16 +38,15 @@ public class Transaction implements Serializable {
     }
 
     private String getStringData(){
-        String data = "";
-        data += senderAddress;
-        data += receiverAddress;
-        data += amount;
-        data += timestamp;
-        // TODO : replace string concatenation with string builder
+        StringBuilder data = new StringBuilder();
+        data.append(senderAddress);
+        data.append(receiverAddress);
+        data.append(amount);
+        data.append(timestamp);
         for (TransactionInput tr : inputs) {
-            data += tr.getPreviousOutputId();
+            data.append(tr.getPreviousOutputId());
         }
-        return data;
+        return data.toString();
     }
 
     private String calculateHash() {
@@ -71,14 +69,15 @@ public class Transaction implements Serializable {
      * Verify that transaction is valid according to given UTXO
      * Doesn't modify any structure
      */
-    public boolean verify(HashMap<String, TransactionOutput> UTXOs) {
+    @SuppressWarnings("BooleanMethodIsAlwaysInverted")
+    public boolean verify(UTXOs UTXOs) {
         if (!(verifySignature() && verifyTxid())) {
-            LOGGER.warning("Invalid signature or txis !?");
+            LOGGER.warning("Invalid signature or txid !?");
             return false;
         }
         int inSum = 0, outSum = 0;
         for (TransactionInput input : inputs) {
-            TransactionOutput output = UTXOs.get(input.getPreviousOutputId());
+            TransactionOutput output = UTXOs.get(input);
             if (output == null) return false;
             if (!output.belongsTo(senderAddress)) {
                 LOGGER.warning("Transaction inputs don't belong to transaction sender ?!");
@@ -104,9 +103,9 @@ public class Transaction implements Serializable {
      * Apply a transaction to given UTXOs
      * No validation at all
      */
-    public void apply(HashMap<String, TransactionOutput> UTXOs) {
-        inputs.forEach(t -> UTXOs.remove(t.getPreviousOutputId()));
-        outputs.forEach(t -> UTXOs.put(t.getId(), t));
+    public void apply(UTXOs utxOs) {
+        inputs.forEach(utxOs::remove);
+        outputs.forEach(utxOs::add);
     }
 
     public String getTxid() {
