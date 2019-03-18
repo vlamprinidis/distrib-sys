@@ -245,6 +245,10 @@ public class Blockchain implements Serializable {
         return sum;
     }
 
+    public Block getLastBlock() {
+        return chain.get(chain.size() - 1);
+    }
+
     public TransactionOutput getGenesisUTXO() {
         return genesisUTXO;
     }

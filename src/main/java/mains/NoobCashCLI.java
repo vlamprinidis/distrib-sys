@@ -1,8 +1,10 @@
 package mains;
 
+import beans.Block;
 import beans.CliTsxData;
 import beans.Message;
 import beans.MessageType;
+import entities.Transaction;
 import network.PeerInfo;
 import org.apache.commons.cli.*;
 
@@ -10,6 +12,7 @@ import java.io.*;
 import java.net.InetAddress;
 import java.net.Socket;
 import java.net.UnknownHostException;
+import java.util.List;
 import java.util.logging.*;
 
 import static utilities.StringUtilities.publicKeyToString;
@@ -144,7 +147,18 @@ public class NoobCashCLI {
                     System.out.println(tMessage.data);
                     break;
                 case "view":
-                    System.out.println("View tsxs");
+                    Message vMsg = sendMessage(oos, ois, new Message(MessageType.LastBlockRequest, null),
+                            MessageType.LastBlockResponse);
+                    if (vMsg == null) return;
+                    Block block = (Block) vMsg.data;
+                    System.out.println("Block index : " + block.getIndex());
+                    List<Transaction> transactionList = block.getTransactions();
+                    for (int i = 0; i < transactionList.size(); i++) {
+                        Transaction tr = transactionList.get(i);
+                        System.out.println("Transaction " + i);
+                        System.out.println("    Txid = " + tr.getTxid());
+                        System.out.println("    Amount = " + tr.getAmount());
+                    }
                     break;
                 case "balance":
                     Integer x = tokens.length > 1 ? Integer.parseInt(tokens[1]) : null;

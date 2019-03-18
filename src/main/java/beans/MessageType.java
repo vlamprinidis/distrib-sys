@@ -14,6 +14,8 @@ public enum MessageType {
     PeerInfoResponse,
     CliTsxRequest,
     CliTsxResponse,
+    LastBlockRequest,
+    LastBlockResponse,
     NewTransaction,
     Ping,
     Pong,

@@ -124,5 +124,9 @@ public class Transaction implements Serializable {
     public int hashCode() {
         return Objects.hash(txid);
     }
+
+    public int getAmount() {
+        return amount;
+    }
 }
 
