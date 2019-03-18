@@ -1,7 +1,7 @@
 package mains;
 
 import beans.Block;
-import beans.CliTsxData;
+import beans.CliTsxRequestData;
 import beans.Message;
 import beans.MessageType;
 import entities.Transaction;
@@ -141,7 +141,7 @@ public class NoobCashCLI {
                     int pid = Integer.parseInt(tokens[1]);
                     int amount = Integer.parseInt(tokens[2]);
                     Message tMessage = sendMessage(oos, ois,
-                            new Message(MessageType.CliTsxRequest, new CliTsxData(pid, amount)),
+                            new Message(MessageType.CliTsxRequest, new CliTsxRequestData(pid, amount)),
                             MessageType.CliTsxResponse);
                     if (tMessage == null) return;
                     System.out.println(tMessage.data);

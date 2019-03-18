@@ -64,6 +64,7 @@ public class StringUtilities {
         return Base64.getEncoder().encodeToString(bytePubKey);
     }
 
+    @SuppressWarnings("unused")
     public static PublicKey stringToPublicKey(String strPubKey) throws NoSuchAlgorithmException, InvalidKeySpecException {
 
         byte[] bytePubKey = Base64.getDecoder().decode(strPubKey);

@@ -94,6 +94,7 @@ public class Blockchain implements Serializable {
 
     /*
      * Create next block from current pool
+     * Must be called only if isFull
      */
     public Block createBlock(){
         List<Transaction> transactions = new ArrayList<>(tsxPool.subList(0, blockSize));
@@ -124,6 +125,14 @@ public class Blockchain implements Serializable {
             }
         }
         return unconfirmedUTXOs;
+    }
+
+    /*
+     * Check if a block has valid structure but is not next expected
+     * If true we might need to ask about possible fork
+     */
+    public boolean isBetter(Block block) {
+        return block.verifyStructure(blockSize, difficulty) && !isExpectedNext(chain, block);
     }
 
     /*
@@ -168,7 +177,6 @@ public class Blockchain implements Serializable {
      * If valid, add it, remove block's transactions from pool and
      * re-apply, if possible, remaining pool transactions to unconfirmed UTXOs
      */
-    @SuppressWarnings("BooleanMethodIsAlwaysInverted")
     public boolean addBlock(Block block) {
         UTXOs newConfirmedUTXOs = new UTXOs(confirmedUTXOs);
         // Copy to avoid custom rollback
@@ -183,6 +191,7 @@ public class Blockchain implements Serializable {
         return true;
     }
 
+    @SuppressWarnings("BooleanMethodIsAlwaysInverted")
     private static boolean isExpectedNext(ArrayList<Block> chain, Block block) {
         Block lastBlock = chain.get(chain.size() - 1);
         return (block.getIndex() == lastBlock.getIndex() + 1) && (block.getPreviousHash().equals(lastBlock.getCurrentHash()));
@@ -267,10 +276,6 @@ public class Blockchain implements Serializable {
 
     public UTXOs getUnconfirmedUTXOs() {
         return unconfirmedUTXOs;
-    }
-
-    public int getDifficulty() {
-        return difficulty;
     }
 
     public LinkedList<Transaction> getTsxPool() {

@@ -13,6 +13,7 @@ import java.net.ServerSocket;
 import java.net.Socket;
 import java.net.UnknownHostException;
 import java.security.NoSuchAlgorithmException;
+import java.util.ArrayList;
 import java.util.Random;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingDeque;
@@ -95,13 +96,14 @@ public class NoobCash {
             LOGGER.severe("Couldn't generate key pair");
             return;
         }
-        Blockchain blockchain = new Blockchain(wallet, 2, 3);
+        final int difficulty = 3;
+        Blockchain blockchain = new Blockchain(wallet, 2, difficulty);
 
         CliThread cliThread = new CliThread(myPort + 1, inQueue);
         cliThread.setDaemon(true);
         cliThread.start();
 
-        MinerThread minerThread = new MinerThread(inQueue);
+        MinerThread minerThread = new MinerThread(inQueue, difficulty);
         minerThread.setDaemon(true);
         minerThread.start();
 
@@ -142,8 +144,8 @@ public class NoobCash {
                     LOGGER.log(Level.SEVERE, e.toString(), e);
                     return;
                 }
-                if (msg.messageType == MessageType.PeerJoin) {
-                    PeerJoinData data = (PeerJoinData) msg.data;
+                if (msg.messageType == MessageType.JoinRequest) {
+                    JoinRequestData data = (JoinRequestData) msg.data;
                     peers[i] = new PeerInfo(address, data.port, socket, data.publicKey);
                     LOGGER.info("BS : peer connected, port = " + data.port);
                 } else {
@@ -160,7 +162,6 @@ public class NoobCash {
                 }
             }
             LOGGER.info("All peers have joined");
-            int difficulty = blockchain.getDifficulty();
             while(blockchain.isFull()) {
                 Block block = blockchain.createBlock();
                 Random randomStream = new Random();
@@ -182,9 +183,9 @@ public class NoobCash {
                 ObjectOutputStream oos;
                 try {
                     oos = new ObjectOutputStream(peers[j].server_socket.getOutputStream());
-                    JoinAnswerData data = new JoinAnswerData(j, peers, blockchain.getChain(),
+                    JoinResponseData data = new JoinResponseData(j, peers, blockchain.getChain(),
                             blockchain.getTsxPool(), blockchain.getGenesisUTXO());
-                    oos.writeObject(new Message(MessageType.JoinAnswer, data));
+                    oos.writeObject(new Message(MessageType.JoinResponse, data));
                 } catch (IOException e) {
                     LOGGER.severe("Couldn't send initial data to peer");
                     return;
@@ -204,7 +205,7 @@ public class NoobCash {
             try {
                 socket = new Socket(BS_ADDR, BS_PORT);
                 oos = new ObjectOutputStream(socket.getOutputStream());
-                oos.writeObject(new Message(MessageType.PeerJoin, new PeerJoinData(myPort, wallet.getPublicKey())));
+                oos.writeObject(new Message(MessageType.JoinRequest, new JoinRequestData(myPort, wallet.getPublicKey())));
                 ois = new ObjectInputStream(socket.getInputStream());
             } catch (IOException e) {
                 LOGGER.severe("Couldn't establish communication with bs");
@@ -212,11 +213,11 @@ public class NoobCash {
             }
             try {
                 msg = (Message) ois.readObject();
-                if (msg.messageType != MessageType.JoinAnswer) {
-                    LOGGER.severe("Instead of JoinAnswer, got : " + msg.messageType);
+                if (msg.messageType != MessageType.JoinResponse) {
+                    LOGGER.severe("Instead of JoinResponse, got : " + msg.messageType);
                     return;
                 }
-                JoinAnswerData data = (JoinAnswerData) msg.data;
+                JoinResponseData data = (JoinResponseData) msg.data;
                 myId = data.id;
                 peers = data.peerInfo;
 
@@ -246,7 +247,6 @@ public class NoobCash {
 
         LOGGER.info("Main loop started");
 
-        // minerThread.mineBlock(0);
         Message msg;
         while(true) {
             try {
@@ -290,15 +290,15 @@ public class NoobCash {
                     }
                     break;
                 case CliTsxRequest:
-                    CliTsxData cliTsxData = (CliTsxData) msg.data;
-                    if (cliTsxData.id >= networkSize) {
+                    CliTsxRequestData cliTsxRequestData = (CliTsxRequestData) msg.data;
+                    if (cliTsxRequestData.id >= networkSize) {
                         LOGGER.warning("CLI request with invalid id (transaction)");
                         break;
                     }
-                    String tsxStr = cliTsxData.amount + " -> " + cliTsxData.id;
+                    String tsxStr = cliTsxRequestData.amount + " -> " + cliTsxRequestData.id;
                     LOGGER.info("Cli request : send " + tsxStr);
-                    Transaction cliTsx = blockchain.createTransaction(peers[cliTsxData.id].publicKey,
-                            cliTsxData.amount);
+                    Transaction cliTsx = blockchain.createTransaction(peers[cliTsxRequestData.id].publicKey,
+                            cliTsxRequestData.amount);
                     String responseString;
                     if (cliTsx == null) {
                         responseString = "Transaction rejected";
@@ -307,8 +307,9 @@ public class NoobCash {
                             LOGGER.severe("Couldn't verify transaction I just made !?");
                             return;
                         }
-                        responseString = "Transaction accepted, awaiting confirmation";
+                        responseString = "Transaction accepted";
                         outPeers.broadcast(new Message(MessageType.NewTransaction, cliTsx));
+                        minerThread.maybeMine(blockchain);
                     }
                     cliThread.sendMessage(new Message(MessageType.CliTsxResponse, responseString));
                     break;
@@ -317,6 +318,7 @@ public class NoobCash {
                     Transaction newTransaction = (Transaction) msg.data;
                     if (blockchain.verifyApplyTransaction(newTransaction)) {
                         LOGGER.info("Transaction accepted");
+                        minerThread.maybeMine(blockchain);
                     } else {
                         LOGGER.warning("Transaction rejected");
                     }
@@ -325,15 +327,53 @@ public class NoobCash {
                     cliThread.sendMessage(new Message(MessageType.LastBlockResponse,
                             blockchain.getLastBlock()));
                     break;
-                case Ping:
-                    outPeers.broadcast(new Message(MessageType.Pong, msg.data));
-                    LOGGER.finer("Got ping");
+                case NewBlock:
+                    NewBlockData newBlockData = (NewBlockData) msg.data;
+                    if (!blockchain.addBlock(newBlockData.block)) {
+                        if (!blockchain.isBetter(newBlockData.block)) {
+                            LOGGER.info("Drop received block, either invalid or not better that ours");
+                        } else {
+                            LOGGER.info("Seemingly valid block but can't add it, ask sender for his chain");
+                            outPeers.send(newBlockData.id,
+                                    new Message(MessageType.ChainRequest, myId));
+                        }
+                    } else {
+                        LOGGER.info("Added received block");
+                        minerThread.stopMining();
+                        minerThread.maybeMine(blockchain);
+                    }
                     break;
-                case Pong:
-                    LOGGER.finer("Got pong");
+                case ChainRequest:
+                    int sender = (Integer) msg.data;
+                    outPeers.send(sender, new Message(MessageType.ChainResponse, blockchain.getChain()));
+                    break;
+                case ChainResponse:
+                    @SuppressWarnings("unchecked")
+                    ArrayList<Block> newChain = (ArrayList<Block>) msg.data;
+                    if (newChain.size() > blockchain.getChain().size()) {
+                        LOGGER.info("Received a bigger chain, try to replace mine");
+                        if (blockchain.replaceChain(newChain)) {
+                            LOGGER.info("Successfully replaced my chain with bigger");
+                            minerThread.stopMining();
+                            minerThread.maybeMine(blockchain);
+                        } else {
+                            LOGGER.warning("Couldn't replace chain with bigger");
+                        }
+                    } else {
+                        LOGGER.info("Received a smaller chain");
+                    }
                     break;
                 case BlockMined:
-                    LOGGER.info("Mined new block!");
+                    LOGGER.info("Received new block from miner thread");
+                    minerThread.blockMinedAck();
+                    Block minedBlock = (Block) msg.data;
+                    if (blockchain.addBlock(minedBlock)) {
+                        LOGGER.info("Added mined block to my chain, broadcasting it");
+                        outPeers.broadcast(new Message(MessageType.NewBlock, new NewBlockData(minedBlock, myId)));
+                    } else {
+                        LOGGER.info("Discarded mined block, invalid or old");
+                    }
+                    minerThread.maybeMine(blockchain);
                     break;
                 case Stop:
                     LOGGER.info("Bye bye");

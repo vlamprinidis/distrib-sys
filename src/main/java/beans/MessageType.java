@@ -6,8 +6,8 @@ package beans;
 public enum MessageType {
     IdRequest,
     IdResponse,
-    PeerJoin,
-    JoinAnswer,
+    JoinRequest,
+    JoinResponse,
     BalanceRequest,
     BalanceResponse,
     PeerInfoRequest,
@@ -16,9 +16,11 @@ public enum MessageType {
     CliTsxResponse,
     LastBlockRequest,
     LastBlockResponse,
-    NewTransaction,
-    Ping,
-    Pong,
+    ChainRequest,
+    ChainResponse,
+    BlockToMine,
     BlockMined,
+    NewTransaction,
+    NewBlock,
     Stop
 }

@@ -8,15 +8,15 @@ import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.LinkedList;
 
-public class JoinAnswerData implements Serializable {
+public class JoinResponseData implements Serializable {
     public int id;
     public PeerInfo[] peerInfo;
     public ArrayList<Block> chain;
     public LinkedList<Transaction> tsxPool;
     public TransactionOutput genesisUTXO;
 
-    public JoinAnswerData(int id, PeerInfo[] peerInfo, ArrayList<Block> chain,
-                          LinkedList<Transaction> tsxPool, TransactionOutput genesisUTXO) {
+    public JoinResponseData(int id, PeerInfo[] peerInfo, ArrayList<Block> chain,
+                            LinkedList<Transaction> tsxPool, TransactionOutput genesisUTXO) {
         this.id = id;
         this.peerInfo = peerInfo;
         this.chain = chain;
