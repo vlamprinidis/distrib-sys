@@ -7,6 +7,8 @@ import java.security.PublicKey;
 import java.util.*;
 import java.util.logging.Logger;
 
+import static utilities.StringUtilities.publicKeyToString;
+
 public class Blockchain implements Serializable {
 
     private static final Logger LOGGER = Logger.getLogger("NOOBCASH");
@@ -59,7 +61,7 @@ public class Blockchain implements Serializable {
     }
 
     /*
-     * Given a chain and genesisTSX, validate it
+     * Validate given chain
      * If valid replace current, rebuild UTXO, modify pool
      * If invalid, return false and don't change anything
      */
@@ -189,9 +191,9 @@ public class Blockchain implements Serializable {
 
     /*
      * Apply a transaction to the unconfirmed UTXOs and add it to pool
-     * Return false if it is invalid
+     * Return false if it is invalid without modifying UTXOs
      */
-    public boolean applyTransaction(Transaction transaction) {
+    public boolean verifyApplyTransaction(Transaction transaction) {
         if (!transaction.verify(unconfirmedUTXOs)) return false;
         transaction.apply(unconfirmedUTXOs);
         tsxPool.add(transaction);

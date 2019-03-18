@@ -7,6 +7,8 @@ import javax.crypto.Cipher;
 import javax.crypto.IllegalBlockSizeException;
 import javax.crypto.NoSuchPaddingException;
 import java.security.*;
+import java.security.spec.InvalidKeySpecException;
+import java.security.spec.X509EncodedKeySpec;
 import java.util.ArrayList;
 import java.util.Base64;
 import java.util.List;
@@ -63,6 +65,19 @@ public class StringUtilities {
         }
     }
 
+    public static String publicKeyToString(PublicKey publicKey){
+
+        byte[] bytePubKey = publicKey.getEncoded();
+
+        return Base64.getEncoder().encodeToString(bytePubKey);
+    }
+
+    public static PublicKey stringToPublicKey(String strPubKey) throws NoSuchAlgorithmException, InvalidKeySpecException {
+
+        byte[] bytePubKey = Base64.getDecoder().decode(strPubKey);
+        KeyFactory keyFactory = KeyFactory.getInstance("RSA");
+        return keyFactory.generatePublic(new X509EncodedKeySpec(bytePubKey));
+    }
 
 
 

@@ -30,7 +30,7 @@ public class TransactionOutput implements Serializable {
     }
 
     boolean belongsTo(PublicKey publicKey) {
-        return recipient == publicKey;
+        return recipient.equals(publicKey);
     }
 
 
@@ -44,5 +44,9 @@ public class TransactionOutput implements Serializable {
 
     int getAmount() {
         return amount;
+    }
+
+    public PublicKey getRecipient() {
+        return recipient;
     }
 }

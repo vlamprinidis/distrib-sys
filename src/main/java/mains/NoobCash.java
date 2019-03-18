@@ -94,7 +94,7 @@ public class NoobCash {
             LOGGER.severe("Couldn't generate key pair");
             return;
         }
-        Blockchain blockchain = new Blockchain(wallet, 2, 3);
+        Blockchain blockchain = new Blockchain(wallet, 1, 3);
 
         CliThread cliThread = new CliThread(myPort + 1, inQueue);
         cliThread.setDaemon(true);
@@ -153,7 +153,7 @@ public class NoobCash {
                     LOGGER.severe("Not enough money to send initial coins !?");
                     return;
                 }
-                if (!blockchain.applyTransaction(tsx)){
+                if (!blockchain.verifyApplyTransaction(tsx)){
                     LOGGER.severe("Invalid initial transaction !?");
                     return;
                 }
@@ -170,6 +170,9 @@ public class NoobCash {
                     return;
                 }
             }
+
+            LOGGER.info("Conf UTXOs size : " + blockchain.getConfirmedUTXOs().size());
+            LOGGER.info("Unonf UTXOs size : " + blockchain.getUnconfirmedUTXOs().size());
 
             for(int j = 1; j < networkSize; j++){
                 ObjectOutputStream oos;
@@ -213,13 +216,18 @@ public class NoobCash {
                 myId = data.id;
                 peers = data.peerInfo;
 
-                blockchain.setTsxPool(data.tsxPool);
+                // Add genesisUTXO (= input of first TSX that gives BS coins)
                 blockchain.setGenesisUTXO(data.genesisUTXO);
+                // Build initial chain, pool, UTXOs
+                LOGGER.info("Initial pool size : " + data.tsxPool.size());
+                blockchain.setTsxPool(data.tsxPool);
                 // manually set initial pending transactions and genesisUTXO
                 if (!blockchain.replaceChain(data.chain)) {
                     LOGGER.severe("Bootstrap sent invalid chain ?!");
                     return;
                 }
+                LOGGER.info("Conf UTXOs size : " + blockchain.getConfirmedUTXOs().size());
+                LOGGER.info("Unonf UTXOs size : " + blockchain.getUnconfirmedUTXOs().size());
                 LOGGER.info("Got and validated initial data");
 
             } catch (IOException e) {
@@ -253,6 +261,48 @@ public class NoobCash {
                     LOGGER.finer("CLI request balance of : " + x);
                     cliThread.sendMessage(new Message(MessageType.BalanceResponse,
                             blockchain.getBalance(peers[x].publicKey)));
+                    break;
+                case PeerInfoRequest:
+                    Integer y = (Integer) msg.data;
+                    if (y != null) {
+                        LOGGER.finer("CLI request peer info of : " + y);
+                        cliThread.sendMessage(new Message(MessageType.PeerInfoResponse,
+                                peers[y]));
+                    } else {
+                        LOGGER.finer("CLI request peer infos");
+                        cliThread.sendMessage(new Message(MessageType.PeerInfoResponse,
+                                peers));
+                    }
+                    break;
+                case CliTsxRequest:
+                    CliTsxData cliTsxData = (CliTsxData) msg.data;
+                    String tsxStr = cliTsxData.amount + " -> " + cliTsxData.id;
+                    LOGGER.info("Cli request : send " + tsxStr);
+                    Transaction cliTsx = blockchain.createTransaction(peers[cliTsxData.id].publicKey,
+                            cliTsxData.amount);
+                    String responseString;
+                    if (cliTsx == null) {
+                        //LOGGER.warning("Rejected cli transaction request : " + tsxStr);
+                        responseString = "Transaction rejected";
+                    } else {
+                        if (!blockchain.verifyApplyTransaction(cliTsx)) {
+                            LOGGER.severe("Couldn't verify transaction I just made !?");
+                            return;
+                        }
+                        responseString = "Transaction accepted, awaiting confirmation";
+                        outPeers.broadcast(new Message(MessageType.NewTransaction, cliTsx));
+                    }
+                    cliThread.sendMessage(new Message(MessageType.CliTsxResponse, responseString));
+                    break;
+                case NewTransaction:
+                    LOGGER.info("Got a new transaction from peer");
+                    Transaction newTransaction = (Transaction) msg.data;
+                    if (blockchain.verifyApplyTransaction(newTransaction)) {
+                        LOGGER.info("Transaction accepted");
+                    } else {
+                        LOGGER.warning("Transaction rejected");
+                    }
+                    break;
                 case Ping:
                     outPeers.broadcast(new Message(MessageType.Pong, msg.data));
                     LOGGER.finer("Got ping");

@@ -1,14 +1,19 @@
 package mains;
 
+import beans.CliTsxData;
 import beans.Message;
 import beans.MessageType;
+import network.PeerInfo;
 import org.apache.commons.cli.*;
+import utilities.StringUtilities;
 
 import java.io.*;
 import java.net.InetAddress;
 import java.net.Socket;
 import java.net.UnknownHostException;
 import java.util.logging.*;
+
+import static utilities.StringUtilities.publicKeyToString;
 
 public class NoobCashCLI {
     private static final Logger LOGGER = Logger.getLogger("NOOBCASH");
@@ -111,26 +116,47 @@ public class NoobCashCLI {
                 case "help":
                     System.out.println("*helpful message*");
                     break;
+                case "peer":
+                    Integer pn = tokens.length > 1 ? Integer.parseInt(tokens[1]) : null;
+                    Message message = sendMessage(oos, ois, new Message(MessageType.PeerInfoRequest, pn),
+                            MessageType.PeerInfoResponse);
+                    if (message == null) return;
+                    if (message.data == null) {
+                        System.out.println("Invalid request");
+                        continue;
+                    }
+                    if (pn == null) {
+                        PeerInfo[] peers = (PeerInfo[]) message.data;
+                        for (int i = 0; i < peers.length; i++){
+                            System.out.println(i + " : " + publicKeyToString(peers[i].publicKey));
+                        }
+                    } else {
+                        PeerInfo peer = (PeerInfo) message.data;
+                        System.out.println(publicKeyToString(peer.publicKey));
+                    }
+                    break;
                 case "t":
-                    System.out.print("New tsx cmd");
+                    int pid = Integer.parseInt(tokens[1]);
+                    int amount = Integer.parseInt(tokens[2]);
+                    Message tMessage = sendMessage(oos, ois,
+                            new Message(MessageType.CliTsxRequest, new CliTsxData(pid, amount)),
+                            MessageType.CliTsxResponse);
+                    if (tMessage == null) return;
+                    System.out.println(tMessage.data);
                     break;
                 case "view":
                     System.out.println("View tsxs");
                     break;
                 case "balance":
                     Integer x = tokens.length > 1 ? Integer.parseInt(tokens[1]) : null;
-                    try{
-                        oos.writeObject(new Message(MessageType.BalanceRequest, x));
-                        msg = (Message) ois.readObject();
-                    } catch (IOException e) {
-                        LOGGER.severe("Couldn't write-read balance messages");
-                        return;
+                    Message bMsg = sendMessage(oos, ois, new Message(MessageType.BalanceRequest, x),
+                            MessageType.BalanceResponse);
+                    if (bMsg == null) return;
+                    if (bMsg.data == null) {
+                        System.out.println("Invalid request");
+                        continue;
                     }
-                    if (msg.messageType != MessageType.BalanceResponse) {
-                        LOGGER.severe("Instead of BalanceResponse, got : " + msg.messageType);
-                        return;
-                    }
-                    System.out.println(msg.data + " coins" );
+                    System.out.println(bMsg.data + " coins" );
                     break;
                 case "file":
                     File file = new File("./transactions/5nodes/transactions" + id + ".txt");
@@ -150,5 +176,23 @@ public class NoobCashCLI {
                     System.out.println("Sorry, what?");
             }
         }
+    }
+
+    private static Message sendMessage(ObjectOutputStream oos, ObjectInputStream ois, Message outMessage,
+                                       MessageType expectedType) throws ClassNotFoundException {
+
+        Message inMessage;
+        try{
+            oos.writeObject(outMessage);
+            inMessage = (Message) ois.readObject();
+        } catch (IOException e) {
+            LOGGER.severe("Couldn't write-read message");
+            return null;
+        }
+        if (inMessage.messageType != expectedType) {
+            LOGGER.severe("Instead of " + expectedType + " got : " + inMessage.messageType);
+            return null;
+        }
+        return inMessage;
     }
 }

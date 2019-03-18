@@ -9,8 +9,11 @@ import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Objects;
+import java.util.logging.Logger;
 
 public class Transaction implements Serializable {
+
+    private transient static final Logger LOGGER = Logger.getLogger("NOOBCASH");
     private PublicKey senderAddress;
     private PublicKey receiverAddress;
     private int amount;
@@ -69,18 +72,32 @@ public class Transaction implements Serializable {
      * Doesn't modify any structure
      */
     public boolean verify(HashMap<String, TransactionOutput> UTXOs) {
-        if (!(verifySignature() && verifyTxid())) return false;
+        if (!(verifySignature() && verifyTxid())) {
+            LOGGER.warning("Invalid signature or txis !?");
+            return false;
+        }
         int inSum = 0, outSum = 0;
         for (TransactionInput input : inputs) {
             TransactionOutput output = UTXOs.get(input.getPreviousOutputId());
-            if ((output == null) || (!output.belongsTo(senderAddress))) return false;
+            if (output == null) return false;
+            if (!output.belongsTo(senderAddress)) {
+                LOGGER.warning("Transaction inputs don't belong to transaction sender ?!");
+                return false;
+            }
             inSum += output.getAmount();
         }
         for (TransactionOutput output : outputs) {
-            if (!output.getParentTransactionId().equals(txid)) return false;
+            if (!output.getParentTransactionId().equals(txid)) {
+                LOGGER.warning("Transaction output parentId and txid don't match ?!");
+                return false;
+            }
             outSum += output.getAmount();
         }
-        return inSum == outSum;
+        if (inSum != outSum) {
+            LOGGER.warning("Transaction sum(in) != sum(out) ?!");
+            return false;
+        }
+        return true;
     }
 
     /*
