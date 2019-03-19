@@ -1,4 +1,4 @@
-package utilities;
+package noobcash.utilities;
 
 import java.security.*;
 import java.security.spec.InvalidKeySpecException;

@@ -1,4 +1,4 @@
-package network;
+package noobcash.network;
 
 
 import java.io.Serializable;

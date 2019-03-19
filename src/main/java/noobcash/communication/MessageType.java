@@ -1,4 +1,4 @@
-package beans;
+package noobcash.communication;
 
 /*
  * Message tags

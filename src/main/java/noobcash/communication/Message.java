@@ -1,4 +1,4 @@
-package beans;
+package noobcash.communication;
 
 import java.io.Serializable;
 

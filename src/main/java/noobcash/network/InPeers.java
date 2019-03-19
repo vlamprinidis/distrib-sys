@@ -1,7 +1,7 @@
-package network;
+package noobcash.network;
 
-import beans.Message;
-import threads.ServerThread;
+import noobcash.communication.Message;
+import noobcash.threads.ServerThread;
 
 import java.io.IOException;
 import java.net.ServerSocket;

@@ -1,8 +1,9 @@
-package beans;
+package noobcash.communication;
 
-import entities.Transaction;
-import entities.TransactionOutput;
-import network.PeerInfo;
+import noobcash.entities.Block;
+import noobcash.entities.Transaction;
+import noobcash.entities.TransactionOutput;
+import noobcash.network.PeerInfo;
 
 import java.io.Serializable;
 import java.util.ArrayList;

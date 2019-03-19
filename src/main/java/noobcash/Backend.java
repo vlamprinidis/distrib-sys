@@ -1,10 +1,11 @@
-package mains;
+package noobcash;
 
-import entities.Blockchain;
-import entities.Transaction;
-import entities.Wallet;
-import network.InPeers;
-import network.OutPeers;
+import noobcash.entities.Block;
+import noobcash.entities.Blockchain;
+import noobcash.entities.Transaction;
+import noobcash.entities.Wallet;
+import noobcash.network.InPeers;
+import noobcash.network.OutPeers;
 import org.apache.commons.cli.*;
 
 import java.io.*;
@@ -19,13 +20,13 @@ import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingDeque;
 import java.util.logging.*;
 
-import beans.*;
-import network.*;
-import threads.CliThread;
-import threads.MinerThread;
+import noobcash.communication.*;
+import noobcash.network.*;
+import noobcash.threads.CliThread;
+import noobcash.threads.MinerThread;
 
 
-public class NoobCash {
+public class Backend {
     private static final Logger LOGGER = Logger.getLogger("NOOBCASH");
     private static final int BS_PORT = 5000;
 
@@ -208,7 +209,7 @@ public class NoobCash {
                 oos.writeObject(new Message(MessageType.JoinRequest, new JoinRequestData(myPort, wallet.getPublicKey())));
                 ois = new ObjectInputStream(socket.getInputStream());
             } catch (IOException e) {
-                LOGGER.severe("Couldn't establish communication with bs");
+                LOGGER.severe("Couldn't establish noobcash.communication with bs");
                 return;
             }
             try {

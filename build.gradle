@@ -4,11 +4,11 @@ plugins {
 }
 
 application {
-    mainClassName = 'mains.NoobCash'
+    mainClassName = 'noobcash.Backend'
 }
 
 task cli(type: JavaExec) {
-    main = "mains.NoobCashCLI"
+    main = "noobcash.Cli"
     classpath = sourceSets.main.runtimeClasspath
     standardInput = System.in
 }

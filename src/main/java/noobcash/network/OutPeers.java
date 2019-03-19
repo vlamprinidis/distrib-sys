@@ -1,11 +1,11 @@
-package network;
+package noobcash.network;
 
 
 import java.net.Socket;
 import java.util.HashMap;
 
-import beans.Message;
-import threads.ClientThread;
+import noobcash.communication.Message;
+import noobcash.threads.ClientThread;
 
 
 public class OutPeers {

@@ -1,9 +1,9 @@
-package threads;
+package noobcash.threads;
 
-import beans.Block;
-import beans.Message;
-import beans.MessageType;
-import entities.Blockchain;
+import noobcash.entities.Block;
+import noobcash.communication.Message;
+import noobcash.communication.MessageType;
+import noobcash.entities.Blockchain;
 
 import java.util.Random;
 import java.util.concurrent.BlockingQueue;

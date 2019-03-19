@@ -1,4 +1,4 @@
-package entities;
+package noobcash.entities;
 
 import java.io.Serializable;
 import java.security.PublicKey;

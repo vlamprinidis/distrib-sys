@@ -1,6 +1,6 @@
-package threads;
+package noobcash.threads;
 
-import beans.Message;
+import noobcash.communication.Message;
 
 import java.io.IOException;
 import java.io.ObjectInputStream;

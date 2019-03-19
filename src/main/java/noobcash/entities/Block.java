@@ -1,11 +1,8 @@
-package beans;
+package noobcash.entities;
 
-import entities.Transaction;
-import entities.UTXOs;
-import utilities.StringUtilities;
+import noobcash.utilities.StringUtilities;
 
 import java.io.Serializable;
-
 import java.util.Date;
 import java.util.List;
 
@@ -18,11 +15,13 @@ public class Block implements Serializable {
     private int nonce;
     private String currentHash;
 
-    public Block(int index, List<Transaction> transactions, String previousHash){
+    Block(int index, List<Transaction> transactions, String previousHash){
         this.index = index;
         this.timestamp = new Date().getTime();
         this.transactions = transactions;
         this.previousHash = previousHash;
+        // Dummy initialization for genesis block
+        nonce = 0;
     }
 
     private String getStringData(){
@@ -42,7 +41,7 @@ public class Block implements Serializable {
         return StringUtilities.applySha256(getStringData());
     }
 
-    public void hash() {
+    void hash() {
         this.currentHash = calculateHash();
     }
 
@@ -67,11 +66,7 @@ public class Block implements Serializable {
         return calculateHash().equals(currentHash);
     }
 
-    public void setNonce(int nonce) {
-        this.nonce = nonce;
-    }
-
-    public boolean verifyStructure(int blockSize, int difficulty) {
+    boolean verifyStructure(int blockSize, int difficulty) {
         return transactions.size() == blockSize && verifyNonce(difficulty) && verifyHash();
     }
 
@@ -79,7 +74,7 @@ public class Block implements Serializable {
      * Verify and apply every transaction modifying given UTXOs accordingly
      * Return false if invalid transaction found
      */
-    public boolean verifyApplyTransactions(UTXOs utxOs) {
+    boolean verifyApplyTransactions(UTXOs utxOs) {
         for (Transaction transaction : transactions) {
             if (!transaction.verify(utxOs)) return false;
             transaction.apply(utxOs);
@@ -99,11 +94,11 @@ public class Block implements Serializable {
         return nonce;
     }
 
-    public String getCurrentHash() {
+    String getCurrentHash() {
         return currentHash;
     }
 
-    public String getPreviousHash() {
+    String getPreviousHash() {
         return previousHash;
     }
 }

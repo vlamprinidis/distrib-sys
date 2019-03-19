@@ -1,6 +1,4 @@
-package entities;
-
-import beans.Block;
+package noobcash.entities;
 
 import java.io.Serializable;
 import java.security.PublicKey;
@@ -53,7 +51,6 @@ public class Blockchain implements Serializable {
         // tsx hasn't been confirmed yet
 
         Block genesisBlock = new Block(0, new ArrayList<>(Collections.singletonList(genesisTSX)), "1");
-        genesisBlock.setNonce(0);
         genesisBlock.hash();
 
         return genesisBlock;
@@ -141,6 +138,7 @@ public class Blockchain implements Serializable {
      * Validate and apply block's transactions using given confirmed UTXOs
      * Return false if something is invalid
      * Modifies given UTXOs either way
+     * Doesn't modify unconfirmed UTXOs and tsxPool in any way
      */
     @SuppressWarnings("BooleanMethodIsAlwaysInverted")
     private static boolean addBlock(Block block, ArrayList<Block> chain, UTXOs confirmedUTXOs){

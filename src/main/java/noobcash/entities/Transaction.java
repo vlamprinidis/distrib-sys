@@ -1,6 +1,6 @@
-package entities;
+package noobcash.entities;
 
-import utilities.StringUtilities;
+import noobcash.utilities.StringUtilities;
 
 import java.io.Serializable;
 import java.security.PrivateKey;
@@ -70,7 +70,7 @@ public class Transaction implements Serializable {
      * Doesn't modify any structure
      */
     @SuppressWarnings("BooleanMethodIsAlwaysInverted")
-    public boolean verify(UTXOs UTXOs) {
+    boolean verify(UTXOs UTXOs) {
         if (!(verifySignature() && verifyTxid())) {
             LOGGER.warning("Invalid signature or txid !?");
             return false;
@@ -103,7 +103,7 @@ public class Transaction implements Serializable {
      * Apply a transaction to given UTXOs
      * No validation at all
      */
-    public void apply(UTXOs utxOs) {
+    void apply(UTXOs utxOs) {
         inputs.forEach(utxOs::remove);
         outputs.forEach(utxOs::add);
     }

@@ -1,4 +1,6 @@
-package beans;
+package noobcash.communication;
+
+import noobcash.entities.Block;
 
 import java.io.Serializable;
 

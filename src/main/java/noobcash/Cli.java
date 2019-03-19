@@ -1,11 +1,11 @@
-package mains;
+package noobcash;
 
-import beans.Block;
-import beans.CliTsxRequestData;
-import beans.Message;
-import beans.MessageType;
-import entities.Transaction;
-import network.PeerInfo;
+import noobcash.entities.Block;
+import noobcash.communication.CliTsxRequestData;
+import noobcash.communication.Message;
+import noobcash.communication.MessageType;
+import noobcash.entities.Transaction;
+import noobcash.network.PeerInfo;
 import org.apache.commons.cli.*;
 
 import java.io.*;
@@ -15,9 +15,9 @@ import java.net.UnknownHostException;
 import java.util.List;
 import java.util.logging.*;
 
-import static utilities.StringUtilities.publicKeyToString;
+import static noobcash.utilities.StringUtilities.publicKeyToString;
 
-public class NoobCashCLI {
+public class Cli {
     private static final Logger LOGGER = Logger.getLogger("NOOBCASH");
     @SuppressWarnings("Duplicates")
     public static void main(String[] args) throws ClassNotFoundException {
