@@ -11,6 +11,7 @@ if (len(sys.argv) < 2 or len(sys.argv) > 3):
     usage()
 
 port = int(sys.argv[1]) + 1
+cmd = "./gradlew cli --console=plain -q --no-daemon "
 if len(sys.argv) == 3 and sys.argv[2] == '-f':
     cmd += f' --args="-p {port} -f"'
 else:
