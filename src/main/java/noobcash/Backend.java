@@ -252,6 +252,7 @@ public class Backend {
                     if (y != null) {
                         if (y >= networkSize) {
                             LOGGER.warning("CLI request with invalid id (peer info)");
+                            cliThread.sendMessage(new Message(MessageType.PeerInfoResponse, "Invalid id"));
                             break;
                         }
                         cliThread.sendMessage(new Message(MessageType.PeerInfoResponse, peers[y]));
@@ -280,8 +281,8 @@ public class Backend {
                     cliThread.sendMessage(new Message(MessageType.CliTsxResponse, responseString));
                     break;
                 case NewTransaction:
-                    LOGGER.finest("New transaction received from peer");
                     Transaction newTransaction = (Transaction) msg.data;
+                    LOGGER.finest("New transaction received from peer, txid = " + newTransaction.getTxid());
                     if (blockchain.verifyApplyTransaction(newTransaction)) {
                         LOGGER.finest("Transaction accepted");
                         minerThread.maybeMine(blockchain);
@@ -294,17 +295,17 @@ public class Backend {
                             blockchain.getLastBlock()));
                     break;
                 case NewBlock:
-                    LOGGER.finest("New block received from peer");
                     NewBlockData newBlockData = (NewBlockData) msg.data;
+                    LOGGER.finest("New block received from peer, index = " + newBlockData.block.getIndex());
                     if (!blockchain.addBlock(newBlockData.block)) {
                         if (!blockchain.possibleLongerFork(newBlockData.block)) {
-                            LOGGER.fine("Discarding received block");
+                            LOGGER.fine("Discarding received (from peer) block");
                         } else {
                             LOGGER.info("Requesting chain, longer fork possibly exists");
                             outPeers.send(newBlockData.id, new Message(MessageType.ChainRequest, myId));
                         }
                     } else {
-                        LOGGER.fine("Added received block");
+                        LOGGER.fine("Added received (from peer) block");
                         minerThread.stopMining();
                         minerThread.maybeMine(blockchain);
                     }
@@ -330,14 +331,14 @@ public class Backend {
                     }
                     break;
                 case BlockMined:
-                    LOGGER.fine("Received new block from miner");
                     minerThread.blockMinedAck();
                     Block minedBlock = (Block) msg.data;
+                    LOGGER.finest("New block received from miner, index = " + minedBlock.getIndex());
                     if (blockchain.addBlock(minedBlock)) {
-                        LOGGER.info("Added new block");
+                        LOGGER.info("Added received (from miner) block");
                         outPeers.broadcast(new Message(MessageType.NewBlock, new NewBlockData(minedBlock, myId)));
                     } else {
-                        LOGGER.info("Discarded miner block");
+                        LOGGER.info("Discarding received (from miner) block");
                     }
                     minerThread.maybeMine(blockchain);
                     break;
