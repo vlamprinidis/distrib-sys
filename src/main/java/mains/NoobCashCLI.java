@@ -26,6 +26,9 @@ public class NoobCashCLI {
         port_opt.setRequired(true);
         options.addOption(port_opt);
 
+        Option file_opt = new Option("f", "file", false, "file transactions first");
+        options.addOption(file_opt);
+
         CommandLineParser parser = new DefaultParser();
         HelpFormatter formatter = new HelpFormatter();
         CommandLine cmd = null;
@@ -40,6 +43,7 @@ public class NoobCashCLI {
 
         String p = cmd.getOptionValue("port");
         int port = Integer.parseInt(p);
+        boolean file_first = cmd.hasOption("f");
 
         LOGGER.setUseParentHandlers(false);
         LOGGER.setLevel(Level.ALL);
@@ -99,9 +103,17 @@ public class NoobCashCLI {
         int id = (Integer) msg.data;
         LOGGER.info("Got backend id : " + id);
 
+        if (file_first) {
+            try {
+                if (!fileTransaction(oos, ois, id)) return;
+            } catch (IOException e) {
+                LOGGER.severe("Can't read line from file");
+                return;
+            }
+        }
+
         String line;
         BufferedReader consoleReader = new BufferedReader(new InputStreamReader(System.in));
-
 
         while (true) {
             System.out.print("# ");
@@ -172,15 +184,12 @@ public class NoobCashCLI {
                     System.out.println(bMsg.data + " coins" );
                     break;
                 case "file":
-                    File file = new File("./transactions/5nodes/transactions" + id + ".txt");
-                    BufferedReader fileReader;
                     try {
-                        fileReader = new BufferedReader(new FileReader(file));
-                    } catch (FileNotFoundException e) {
-                        LOGGER.severe("Couldn't open transactions file");
+                        if (!fileTransaction(oos, ois, id)) return;
+                    } catch (IOException e) {
+                        LOGGER.severe("Can't read line from file");
                         return;
                     }
-                    System.out.println("*send file cmd's to backedn*");
                     break;
                 case "q":
                     LOGGER.info("Bye !");
@@ -207,5 +216,34 @@ public class NoobCashCLI {
             return null;
         }
         return inMessage;
+    }
+
+    private static boolean fileTransaction(ObjectOutputStream oos, ObjectInputStream ois, int id) throws IOException,
+            ClassNotFoundException {
+        File file = new File("./transactions/5nodes/transactions" + id + ".txt");
+        BufferedReader fileReader;
+        try {
+            fileReader = new BufferedReader(new FileReader(file));
+        } catch (FileNotFoundException e) {
+            LOGGER.severe("Couldn't open transactions file");
+            return false;
+        }
+        System.out.println("Reading transactions" + id + ".txt");
+        String line;
+        while ((line = fileReader.readLine()) != null) {
+            String[] tokens = line.trim().split(" ");
+            int x = Character.getNumericValue(tokens[0].charAt(2));
+            int c = Integer.parseInt(tokens[1]);
+            System.out.println("Transaction : " + c + " coins -> " + x);
+            Message resp = sendMessage(oos, ois, new Message(MessageType.CliTsxRequest, new CliTsxRequestData(x, c)),
+                    MessageType.CliTsxResponse);
+            if (resp == null) {
+                fileReader.close();
+                return false;
+            }
+            System.out.println(resp.data);
+        }
+        fileReader.close();
+        return true;
     }
 }

@@ -293,6 +293,7 @@ public class NoobCash {
                     CliTsxRequestData cliTsxRequestData = (CliTsxRequestData) msg.data;
                     if (cliTsxRequestData.id >= networkSize) {
                         LOGGER.warning("CLI request with invalid id (transaction)");
+                        cliThread.sendMessage(new Message(MessageType.CliTsxResponse, "Invalid id"));
                         break;
                     }
                     String tsxStr = cliTsxRequestData.amount + " -> " + cliTsxRequestData.id;
