@@ -4,11 +4,11 @@ import os
 import sys
 
 if (len(sys.argv) < 2):
-    print(f"usage: {sys.argv[0]} network-size [port]")
+    print("usage: {} network-size [port]".format(sys.argv[0]))
     sys.exit()
 if (len(sys.argv) == 2):
-    params = f"-n {sys.argv[1]}"
+    params = "-n {}".format(sys.argv[1])
 else:
-    params = f"-n {sys.argv[1]} -p {sys.argv[2]}"
+    params = "-n {} -p {}".format(sys.argv[1], sys.argv[2])
 
-os.system(f'./gradlew run --args="{params}"')
+os.system('./gradlew run --args="{}"'.format(params))
