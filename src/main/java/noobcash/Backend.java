@@ -79,7 +79,7 @@ public class Backend {
 
         InetAddress BS_ADDR;
         try {
-            BS_ADDR = InetAddress.getByName("127.0.0.1");
+            BS_ADDR = InetAddress.getByName("192.168.0.1");
         } catch (UnknownHostException e) {
             LOGGER.severe("Can't find BS address");
             return;
