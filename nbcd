@@ -1,0 +1,14 @@
+#!/usr/bin/env python3
+
+import os
+import sys
+
+if (len(sys.argv) < 2):
+    print(f"usage: {sys.argv[0]} network-size [port]")
+    sys.exit()
+if (len(sys.argv) == 2):
+    params = f"-n {sys.argv[1]}"
+else:
+    params = f"-n {sys.argv[1]} -p {sys.argv[2]}"
+
+os.system(f'./gradlew run --args="{params}"')
