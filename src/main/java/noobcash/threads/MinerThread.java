@@ -40,7 +40,7 @@ public class MinerThread extends Thread{
             try {
                 msg = inQueue.take();
             } catch (InterruptedException e) {
-                // LOGGER.info("Interrupted while take'ing block from queue");
+                LOGGER.info("Interrupted while take'ing block from queue");
                 continue;
             }
             if (msg.messageType != MessageType.BlockToMine) {
@@ -48,21 +48,21 @@ public class MinerThread extends Thread{
                 continue;
             }
             block = ((Block) msg.data);
-            // LOGGER.finer("Mining block " + block.getIndex());
 
-            // Check if interrupted, clearing interrupt flag if it is set
-            while (!interrupted()){
+            LOGGER.info("Mining block " + block.getIndex());
+
+            while (!isInterrupted()){
                 if (block.tryMine(randomStream.nextInt(), difficulty)) {
-                    // LOGGER.fine("Block mined");
+                    LOGGER.info("Mined block " + block.getIndex());
                     try {
                         outQueue.put(new Message(MessageType.BlockMined, block));
                     } catch (InterruptedException e) {
-                        // TODO : remove it
-                        LOGGER.info("Interrupted while put'ing mined block to queue");
+                        interrupt();
                     }
                     break;
                 }
             }
+            if (interrupted()) LOGGER.info("Interrupted while mining");
         }
     }
 
