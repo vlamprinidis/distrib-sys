@@ -8,8 +8,9 @@ import java.io.ObjectOutputStream;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.concurrent.BlockingQueue;
-import java.util.logging.Level;
 import java.util.logging.Logger;
+
+import static noobcash.utilities.ErrorUtilities.fatal;
 
 public class CliThread extends Thread {
     private static final Logger LOGGER = Logger.getLogger("NOOBCASH");
@@ -22,7 +23,7 @@ public class CliThread extends Thread {
         this.queue = queue;
     }
 
-    @SuppressWarnings("Duplicates")
+    @SuppressWarnings({"Duplicates", "InfiniteLoopStatement"})
     @Override
     public void run() {
         ObjectInputStream ois;
@@ -30,7 +31,7 @@ public class CliThread extends Thread {
         try {
             serverSocket = new ServerSocket(port);
         } catch (IOException e) {
-            LOGGER.log(Level.SEVERE, e.toString(), e);
+            fatal("Can't open cli server socket");
             return;
         }
         try {
@@ -39,22 +40,21 @@ public class CliThread extends Thread {
             ois = new ObjectInputStream(socket.getInputStream());
             oos = new ObjectOutputStream(socket.getOutputStream());
         } catch (IOException e) {
-            LOGGER.log(Level.SEVERE, e.toString(), e);
-            System.exit(1);
+            fatal("Can't create cli streams");
             return;
         }
 
         while(true) {
             try {
                 queue.put((Message) ois.readObject());
-            } catch (InterruptedException | IOException e) {
-                LOGGER.log(Level.SEVERE, e.toString(), e);
-                return;
+            } catch (InterruptedException e) {
+                // LOGGER.warning("Interrupted while put'ing message");
             } catch (ClassNotFoundException e) {
-                LOGGER.log(Level.WARNING, "Unexpectedly cliThread got non-Message object from queue : [{0}]", e);
-                continue;
+                fatal(e.toString());
+            } catch (IOException e) {
+                fatal("Can't read object from cli stream");
             }
-            LOGGER.finest("Successfully got message from cli and put it into queue");
+            // LOGGER.finest("Forwarded cli message to main thread");
         }
     }
 
@@ -62,7 +62,7 @@ public class CliThread extends Thread {
         try {
             oos.writeObject(msg);
         } catch (IOException e) {
-            LOGGER.log(Level.SEVERE, e.toString(), e);
+            LOGGER.severe("Can't write message to cli stream");
         }
     }
 }

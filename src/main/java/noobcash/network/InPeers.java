@@ -10,6 +10,8 @@ import java.util.concurrent.BlockingQueue;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
+import static noobcash.utilities.ErrorUtilities.fatal;
+
 public class InPeers {
     private static final Logger LOGGER = Logger.getLogger("NOOBCASH");
     private BlockingQueue<Message> queue;
@@ -47,8 +49,7 @@ public class InPeers {
             try {
                 server = new ServerSocket(port);
             } catch (IOException e) {
-                LOGGER.log(Level.SEVERE, e.toString(), e);
-                System.exit(1);
+                fatal("Can't open server socket");
                 return;
             }
             while(i < size) {
@@ -56,8 +57,8 @@ public class InPeers {
                 try {
                     socket = server.accept();
                 } catch (IOException e) {
-                    LOGGER.log(Level.SEVERE, e.toString(), e);
-                    continue;
+                    fatal("Can't accept connection");
+                    return;
                 }
                 ServerThread thread = new ServerThread(socket, queue);
                 thread.setDaemon(true);

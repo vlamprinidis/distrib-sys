@@ -6,8 +6,9 @@ import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.net.Socket;
 import java.util.concurrent.BlockingQueue;
-import java.util.logging.Level;
 import java.util.logging.Logger;
+
+import static noobcash.utilities.ErrorUtilities.fatal;
 
 public class ServerThread extends Thread {
 
@@ -20,27 +21,28 @@ public class ServerThread extends Thread {
         this.queue = queue;
     }
 
+    @SuppressWarnings("InfiniteLoopStatement")
     @Override
     public void run() {
         ObjectInputStream ois;
         try {
             ois = new ObjectInputStream(socket.getInputStream());
         } catch (IOException e) {
-            LOGGER.log(Level.SEVERE, e.toString(), e);
+            fatal("Can't create input stream");
             return;
         }
 
         while(true) {
             try {
                 queue.put((Message) ois.readObject());
-            } catch (InterruptedException | IOException e) {
-                LOGGER.log(Level.SEVERE, e.toString(), e);
-                return;
+            } catch (InterruptedException e) {
+                LOGGER.severe("Interrupted while put'ing message");
             } catch (ClassNotFoundException e) {
-                LOGGER.log(Level.WARNING, "Unexpectedly serverThread got non-Message object from queue : [{0}]", e);
-                continue;
+                fatal(e.toString());
+            } catch (IOException e) {
+                fatal("Can't read object from peer stream");
             }
-            LOGGER.finest("Successfully got message from peer and put it into queue");
+            // LOGGER.finest("Forwarded peer message to main thread");
         }
 
     }

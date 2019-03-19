@@ -13,12 +13,10 @@ import java.net.InetAddress;
 import java.net.Socket;
 import java.net.UnknownHostException;
 import java.util.List;
-import java.util.logging.*;
 
 import static noobcash.utilities.StringUtilities.publicKeyToString;
 
 public class Cli {
-    private static final Logger LOGGER = Logger.getLogger("NOOBCASH");
     @SuppressWarnings("Duplicates")
     public static void main(String[] args) throws ClassNotFoundException {
         Options options = new Options();
@@ -45,36 +43,15 @@ public class Cli {
         int port = Integer.parseInt(p);
         boolean file_first = cmd.hasOption("f");
 
-        LOGGER.setUseParentHandlers(false);
-        LOGGER.setLevel(Level.ALL);
-
-        /*
-        ConsoleHandler consoleHandler = new ConsoleHandler();
-        consoleHandler.setFormatter(new SimpleFormatter());
-        consoleHandler.setLevel(Level.INFO);
-        LOGGER.addHandler(consoleHandler);
-        */
-
-        FileHandler fileHandler;
-        try {
-            fileHandler = new FileHandler("noobcash-cli.%u.%g.log");
-            fileHandler.setFormatter(new SimpleFormatter());
-            fileHandler.setLevel(Level.ALL);
-            LOGGER.addHandler(fileHandler);
-        } catch (IOException e) {
-            e.printStackTrace();
-            System.exit(1);
-        }
-
         InetAddress serverAddress;
         try {
             serverAddress  = InetAddress.getByName("127.0.0.1");
         } catch (UnknownHostException e) {
-            LOGGER.severe("Couldn't find backend address");
+            fatal("Can't find backend address");
             return;
         }
 
-        System.out.println("NoobCash cli ");
+        System.out.println("NoobCash cli");
 
         Socket socket;
         ObjectInputStream ois;
@@ -82,10 +59,10 @@ public class Cli {
         try {
             socket = new Socket(serverAddress, port);
         } catch (IOException e) {
-            LOGGER.severe("Couldn't connect to backend");
+            fatal("Can't connect to backend");
             return;
         }
-        LOGGER.info("Connected");
+        System.out.println("Connected !");
         Message msg;
         try {
             oos = new ObjectOutputStream(socket.getOutputStream());
@@ -93,24 +70,17 @@ public class Cli {
             ois = new ObjectInputStream(socket.getInputStream());
             msg = (Message) ois.readObject();
         } catch (IOException e){
-            LOGGER.severe("Couldn't write-read id messages");
+            fatal("Can't write-read id messages");
             return;
         }
         if (msg.messageType != MessageType.IdResponse) {
-            LOGGER.severe("Instead of PeerId, got : " + msg.messageType);
+            fatal("Instead of PeerId, got : " + msg.messageType);
             return;
         }
         int id = (Integer) msg.data;
-        LOGGER.info("Got backend id : " + id);
+        System.out.println("ID : " + id);
 
-        if (file_first) {
-            try {
-                if (!fileTransaction(oos, ois, id)) return;
-            } catch (IOException e) {
-                LOGGER.severe("Can't read line from file");
-                return;
-            }
-        }
+        if (file_first) fileTransaction(oos, ois, id);
 
         String line;
         BufferedReader consoleReader = new BufferedReader(new InputStreamReader(System.in));
@@ -120,10 +90,9 @@ public class Cli {
             try {
                 line = consoleReader.readLine();
             } catch (IOException e) {
-                LOGGER.log(Level.SEVERE, "Couldn't read line", e);
+                fatal("Can't read line");
                 return;
             }
-            LOGGER.finest("Processing command : " + line);
             if (line.trim().isEmpty()) continue;
             String[] tokens = line.trim().split(" ");
             switch (tokens[0]) {
@@ -134,6 +103,7 @@ public class Cli {
                     Integer pn = tokens.length > 1 ? Integer.parseInt(tokens[1]) : null;
                     Message message = sendMessage(oos, ois, new Message(MessageType.PeerInfoRequest, pn),
                             MessageType.PeerInfoResponse);
+                    // Will never happen but compiler can't know
                     if (message == null) return;
                     if (message.data == null) {
                         System.out.println("Invalid request");
@@ -164,6 +134,7 @@ public class Cli {
                     if (vMsg == null) return;
                     Block block = (Block) vMsg.data;
                     System.out.println("Block index : " + block.getIndex());
+                    System.out.println("Block nonce : " + block.getNonce());
                     List<Transaction> transactionList = block.getTransactions();
                     for (int i = 0; i < transactionList.size(); i++) {
                         Transaction tr = transactionList.get(i);
@@ -184,15 +155,10 @@ public class Cli {
                     System.out.println(bMsg.data + " coins" );
                     break;
                 case "file":
-                    try {
-                        if (!fileTransaction(oos, ois, id)) return;
-                    } catch (IOException e) {
-                        LOGGER.severe("Can't read line from file");
-                        return;
-                    }
+                    fileTransaction(oos, ois, id);
                     break;
                 case "q":
-                    LOGGER.info("Bye !");
+                    System.out.println("Bye!");
                     return;
                 default:
                     System.out.println("Sorry, what?");
@@ -208,28 +174,30 @@ public class Cli {
             oos.writeObject(outMessage);
             inMessage = (Message) ois.readObject();
         } catch (IOException e) {
-            LOGGER.severe("Couldn't write-read message");
+            fatal("Cant't write-read message");
             return null;
         }
         if (inMessage.messageType != expectedType) {
-            LOGGER.severe("Instead of " + expectedType + " got : " + inMessage.messageType);
+            fatal("Instead of " + expectedType + " got : " + inMessage.messageType);
             return null;
         }
         return inMessage;
     }
 
-    private static boolean fileTransaction(ObjectOutputStream oos, ObjectInputStream ois, int id) throws IOException,
-            ClassNotFoundException {
+    private static void fileTransaction(ObjectOutputStream oos, ObjectInputStream ois, int id)
+            throws ClassNotFoundException {
         File file = new File("./transactions/5nodes/transactions" + id + ".txt");
         BufferedReader fileReader;
         try {
             fileReader = new BufferedReader(new FileReader(file));
         } catch (FileNotFoundException e) {
-            LOGGER.severe("Couldn't open transactions file");
-            return false;
+            fatal("Can't open transactions file");
+            return;
         }
         System.out.println("Reading transactions" + id + ".txt");
         String line;
+        try {
+
         while ((line = fileReader.readLine()) != null) {
             String[] tokens = line.trim().split(" ");
             int x = Character.getNumericValue(tokens[0].charAt(2));
@@ -239,11 +207,18 @@ public class Cli {
                     MessageType.CliTsxResponse);
             if (resp == null) {
                 fileReader.close();
-                return false;
+                return;
             }
             System.out.println(resp.data);
         }
         fileReader.close();
-        return true;
+        } catch (IOException e) {
+            fatal(e.toString());
+        }
+    }
+
+    private static void fatal(String message) {
+        System.err.println(message);
+        System.exit(1);
     }
 }

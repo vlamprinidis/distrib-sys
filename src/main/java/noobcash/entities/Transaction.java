@@ -71,8 +71,12 @@ public class Transaction implements Serializable {
      */
     @SuppressWarnings("BooleanMethodIsAlwaysInverted")
     boolean verify(UTXOs UTXOs) {
-        if (!(verifySignature() && verifyTxid())) {
-            LOGGER.warning("Invalid signature or txid !?");
+        if (!verifySignature()) {
+            LOGGER.warning("Invalid transaction signature");
+            return false;
+        }
+        if (!verifyTxid()) {
+            LOGGER.warning("Invalid transaction txid");
             return false;
         }
         int inSum = 0, outSum = 0;
@@ -80,20 +84,20 @@ public class Transaction implements Serializable {
             TransactionOutput output = UTXOs.get(input);
             if (output == null) return false;
             if (!output.belongsTo(senderAddress)) {
-                LOGGER.warning("Transaction inputs don't belong to transaction sender ?!");
+                LOGGER.warning("Transaction inputs don't belong to transaction sender");
                 return false;
             }
             inSum += output.getAmount();
         }
         for (TransactionOutput output : outputs) {
             if (!output.getParentTransactionId().equals(txid)) {
-                LOGGER.warning("Transaction output parentId and txid don't match ?!");
+                LOGGER.warning("Output txid and transaction txid don' match");
                 return false;
             }
             outSum += output.getAmount();
         }
         if (inSum != outSum) {
-            LOGGER.warning("Transaction sum(in) != sum(out) ?!");
+            LOGGER.warning("Transaction sum(in) != sum(out)");
             return false;
         }
         return true;

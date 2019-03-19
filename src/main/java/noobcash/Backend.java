@@ -25,6 +25,8 @@ import noobcash.network.*;
 import noobcash.threads.CliThread;
 import noobcash.threads.MinerThread;
 
+import static noobcash.utilities.ErrorUtilities.fatal;
+
 
 public class Backend {
     private static final Logger LOGGER = Logger.getLogger("NOOBCASH");
@@ -72,14 +74,14 @@ public class Backend {
             fileHandler.setLevel(Level.ALL);
             LOGGER.addHandler(fileHandler);
         } catch (IOException e) {
-            LOGGER.log(Level.WARNING, e.toString(), e);
+            LOGGER.warning("Can't open log file");
         }
 
         InetAddress BS_ADDR;
         try {
             BS_ADDR = InetAddress.getByName("127.0.0.1");
         } catch (UnknownHostException e) {
-            LOGGER.severe("Couldn't find BS address");
+            LOGGER.severe("Can't find BS address");
             return;
         }
 
@@ -94,11 +96,11 @@ public class Backend {
         try {
             wallet = new Wallet();
         } catch (NoSuchAlgorithmException e) {
-            LOGGER.severe("Couldn't generate key pair");
+            LOGGER.severe("Can't generate key pair");
             return;
         }
-        final int difficulty = 3;
-        Blockchain blockchain = new Blockchain(wallet, 2, difficulty);
+        final int difficulty = 4;
+        Blockchain blockchain = new Blockchain(wallet, 6, difficulty);
 
         CliThread cliThread = new CliThread(myPort + 1, inQueue);
         cliThread.setDaemon(true);
@@ -110,12 +112,7 @@ public class Backend {
 
         if (isBootstrap) {
             Block genesisBlock = blockchain.generateGenesis(networkSize);
-            assert genesisBlock.isGenesis();
-            // block created, not confirmed := added to chain
-            if (!blockchain.addBlock(genesisBlock)) {
-                LOGGER.severe("Couldn't add genesis block to chain !?");
-                return;
-            }
+            if (!blockchain.addBlock(genesisBlock)) fatal("Can't add genesis block");
 
             myId = 0;
             peers = new PeerInfo[networkSize];
@@ -123,7 +120,7 @@ public class Backend {
             try {
                 server = new ServerSocket(BS_PORT);
             } catch (IOException e) {
-                LOGGER.log(Level.SEVERE, e.toString(), e);
+                fatal("Can't open server socket");
                 return;
             }
             peers[0] = new PeerInfo(BS_ADDR, BS_PORT, null, wallet.getPublicKey());
@@ -132,7 +129,7 @@ public class Backend {
                 try {
                     socket = server.accept();
                 } catch (IOException e) {
-                    LOGGER.severe("Couldn't accept connection");
+                    fatal("Can't accept connection");
                     return;
                 }
                 InetAddress address = socket.getInetAddress();
@@ -148,19 +145,13 @@ public class Backend {
                 if (msg.messageType == MessageType.JoinRequest) {
                     JoinRequestData data = (JoinRequestData) msg.data;
                     peers[i] = new PeerInfo(address, data.port, socket, data.publicKey);
-                    LOGGER.info("BS : peer connected, port = " + data.port);
+                    LOGGER.fine("Peer connected, port = " + data.port);
                 } else {
-                    LOGGER.warning("BS : Got unexpected message type : " + msg.messageType);
+                    fatal("Unexpected message : "+ msg.messageType);
                 }
                 Transaction tsx = blockchain.createTransaction(peers[i].publicKey, 100);
-                if (tsx == null) {
-                    LOGGER.severe("Not enough money to send initial coins !?");
-                    return;
-                }
-                if (!blockchain.verifyApplyTransaction(tsx)){
-                    LOGGER.severe("Invalid initial transaction !?");
-                    return;
-                }
+                if (tsx == null) fatal("Can't create initial transaction");
+                if (!blockchain.verifyApplyTransaction(tsx)) fatal("Can't verify self-made initial transaction");
             }
             LOGGER.info("All peers have joined");
             while(blockchain.isFull()) {
@@ -170,15 +161,11 @@ public class Backend {
                 while(true) {
                     if (block.tryMine(randomStream.nextInt(), difficulty)) break;
                 }
-                LOGGER.info("Nonce : " + block.getNonce());
-                if(!blockchain.addBlock(block)) {
-                    LOGGER.severe("Couldn't add my own block to chain !?");
-                    return;
-                }
+                if (!blockchain.addBlock(block)) fatal("Can't add initial block's to chain");
             }
 
-            LOGGER.info("Confirmed UTXOs size : " + blockchain.getConfirmedUTXOs().size());
-            LOGGER.info("Unconfirmed UTXOs size : " + blockchain.getUnconfirmedUTXOs().size());
+            LOGGER.info("Initial confirmed UTXOs size : " + blockchain.getConfirmedUTXOs().size());
+            LOGGER.info("Initial unconfirmed UTXOs size : " + blockchain.getUnconfirmedUTXOs().size());
 
             for(int j = 1; j < networkSize; j++){
                 ObjectOutputStream oos;
@@ -188,11 +175,9 @@ public class Backend {
                             blockchain.getTsxPool(), blockchain.getGenesisUTXO());
                     oos.writeObject(new Message(MessageType.JoinResponse, data));
                 } catch (IOException e) {
-                    LOGGER.severe("Couldn't send initial data to peer");
-                    return;
+                    fatal("Can't send initial data to peer");
                 }
             }
-            LOGGER.info("Initial data have been sent");
             outPeers = new OutPeers(peers);
             new InPeers(peers, inQueue);
 
@@ -209,59 +194,48 @@ public class Backend {
                 oos.writeObject(new Message(MessageType.JoinRequest, new JoinRequestData(myPort, wallet.getPublicKey())));
                 ois = new ObjectInputStream(socket.getInputStream());
             } catch (IOException e) {
-                LOGGER.severe("Couldn't establish noobcash.communication with bs");
+                fatal("Can't establish communication with BS");
                 return;
             }
             try {
                 msg = (Message) ois.readObject();
-                if (msg.messageType != MessageType.JoinResponse) {
-                    LOGGER.severe("Instead of JoinResponse, got : " + msg.messageType);
-                    return;
-                }
-                JoinResponseData data = (JoinResponseData) msg.data;
-                myId = data.id;
-                peers = data.peerInfo;
-
-                // Manually set genesisUTXO (= input of first TSX that gives BS coins)
-                blockchain.setGenesisUTXO(data.genesisUTXO);
-
-                if (!blockchain.replaceChain(data.chain)) {
-                    LOGGER.severe("Bootstrap sent invalid chain ?!");
-                    return;
-                }
-
-                // Pretend that you received initial unconfirmed transaction, adding each one
-                for (Transaction t : data.tsxPool) {
-                    if (!blockchain.verifyApplyTransaction(t)) {
-                        LOGGER.severe("Couldn't initial unconfirmed transactions !?");
-                        return;
-                    }
-                }
-                LOGGER.info("Got and validated all initial data");
-
             } catch (IOException e) {
-                LOGGER.log(Level.SEVERE, e.toString(), e);
+                fatal("Can't read initial joinData");
                 return;
+            }
+            if (msg.messageType != MessageType.JoinResponse) {
+                fatal("Instead of JoinResponse, got : " + msg.messageType);
+            }
+            JoinResponseData data = (JoinResponseData) msg.data;
+            myId = data.id;
+            peers = data.peerInfo;
+
+            // Manually set genesisUTXO (= input of first TSX that gives BS coins)
+            blockchain.setGenesisUTXO(data.genesisUTXO);
+
+            if (!blockchain.replaceChain(data.chain)) fatal("Can't verify initial chain");
+
+            // Pretend that you received initial unconfirmed transaction, adding each one
+            for (Transaction t : data.tsxPool) {
+                if (!blockchain.verifyApplyTransaction(t)) fatal("Can't verify initial unconfirmed transactions");
             }
             outPeers = new OutPeers(peers, socket, myId);
         }
 
-        LOGGER.info("Main loop started");
+        LOGGER.info("Processing incoming messages");
 
         Message msg;
         while(true) {
             try {
                 msg = inQueue.take();
             } catch (InterruptedException e) {
-                LOGGER.log(Level.SEVERE, "Unexpectedly interrupted while processing : [{0}] ", e);
+                LOGGER.warning("Interrupted while take'ing message from queue");
                 continue;
             }
 
-            LOGGER.log( Level.FINER, "processing[{0}]: {1}", new Object[]{ msg.messageType,  msg.data });
-
+            LOGGER.finest("Processing : " + msg.messageType);
             switch (msg.messageType) {
                 case IdRequest:
-                    LOGGER.finer("CLI requested id, sending : " + myId);
                     cliThread.sendMessage(new Message(MessageType.IdResponse, myId));
                     break;
                 case BalanceRequest:
@@ -270,7 +244,6 @@ public class Backend {
                         LOGGER.warning("CLI request with invalid id (balance)");
                         break;
                     }
-                    LOGGER.finer("CLI request balance of : " + x);
                     cliThread.sendMessage(new Message(MessageType.BalanceResponse,
                             blockchain.getBalance(peers[x].publicKey)));
                     break;
@@ -281,13 +254,9 @@ public class Backend {
                             LOGGER.warning("CLI request with invalid id (peer info)");
                             break;
                         }
-                        LOGGER.finer("CLI request peer info of : " + y);
-                        cliThread.sendMessage(new Message(MessageType.PeerInfoResponse,
-                                peers[y]));
+                        cliThread.sendMessage(new Message(MessageType.PeerInfoResponse, peers[y]));
                     } else {
-                        LOGGER.finer("CLI request peer infos");
-                        cliThread.sendMessage(new Message(MessageType.PeerInfoResponse,
-                                peers));
+                        cliThread.sendMessage(new Message(MessageType.PeerInfoResponse, peers));
                     }
                     break;
                 case CliTsxRequest:
@@ -297,18 +266,13 @@ public class Backend {
                         cliThread.sendMessage(new Message(MessageType.CliTsxResponse, "Invalid id"));
                         break;
                     }
-                    String tsxStr = cliTsxRequestData.amount + " -> " + cliTsxRequestData.id;
-                    LOGGER.info("Cli request : send " + tsxStr);
                     Transaction cliTsx = blockchain.createTransaction(peers[cliTsxRequestData.id].publicKey,
                             cliTsxRequestData.amount);
                     String responseString;
                     if (cliTsx == null) {
                         responseString = "Transaction rejected";
                     } else {
-                        if (!blockchain.verifyApplyTransaction(cliTsx)) {
-                            LOGGER.severe("Couldn't verify transaction I just made !?");
-                            return;
-                        }
+                        if (!blockchain.verifyApplyTransaction(cliTsx)) fatal("Can't verify transaction I just made");
                         responseString = "Transaction accepted";
                         outPeers.broadcast(new Message(MessageType.NewTransaction, cliTsx));
                         minerThread.maybeMine(blockchain);
@@ -316,13 +280,13 @@ public class Backend {
                     cliThread.sendMessage(new Message(MessageType.CliTsxResponse, responseString));
                     break;
                 case NewTransaction:
-                    LOGGER.info("Got a new transaction from peer");
+                    LOGGER.finest("New transaction received from peer");
                     Transaction newTransaction = (Transaction) msg.data;
                     if (blockchain.verifyApplyTransaction(newTransaction)) {
-                        LOGGER.info("Transaction accepted");
+                        LOGGER.finest("Transaction accepted");
                         minerThread.maybeMine(blockchain);
                     } else {
-                        LOGGER.warning("Transaction rejected");
+                        LOGGER.info("Transaction rejected");
                     }
                     break;
                 case LastBlockRequest:
@@ -330,17 +294,17 @@ public class Backend {
                             blockchain.getLastBlock()));
                     break;
                 case NewBlock:
+                    LOGGER.finest("New block received from peer");
                     NewBlockData newBlockData = (NewBlockData) msg.data;
                     if (!blockchain.addBlock(newBlockData.block)) {
-                        if (!blockchain.isBetter(newBlockData.block)) {
-                            LOGGER.info("Drop received block, either invalid or not better that ours");
+                        if (!blockchain.possibleLongerFork(newBlockData.block)) {
+                            LOGGER.fine("Discarding received block");
                         } else {
-                            LOGGER.info("Seemingly valid block but can't add it, ask sender for his chain");
-                            outPeers.send(newBlockData.id,
-                                    new Message(MessageType.ChainRequest, myId));
+                            LOGGER.info("Requesting chain, longer fork possibly exists");
+                            outPeers.send(newBlockData.id, new Message(MessageType.ChainRequest, myId));
                         }
                     } else {
-                        LOGGER.info("Added received block");
+                        LOGGER.fine("Added received block");
                         minerThread.stopMining();
                         minerThread.maybeMine(blockchain);
                     }
@@ -353,27 +317,27 @@ public class Backend {
                     @SuppressWarnings("unchecked")
                     ArrayList<Block> newChain = (ArrayList<Block>) msg.data;
                     if (newChain.size() > blockchain.getChain().size()) {
-                        LOGGER.info("Received a bigger chain, try to replace mine");
+                        LOGGER.info("Received a bigger chain");
                         if (blockchain.replaceChain(newChain)) {
-                            LOGGER.info("Successfully replaced my chain with bigger");
+                            LOGGER.info("Replaced chain with bigger");
                             minerThread.stopMining();
                             minerThread.maybeMine(blockchain);
                         } else {
-                            LOGGER.warning("Couldn't replace chain with bigger");
+                            LOGGER.warning("Bad received chain");
                         }
                     } else {
                         LOGGER.info("Received a smaller chain");
                     }
                     break;
                 case BlockMined:
-                    LOGGER.info("Received new block from miner thread");
+                    LOGGER.fine("Received new block from miner");
                     minerThread.blockMinedAck();
                     Block minedBlock = (Block) msg.data;
                     if (blockchain.addBlock(minedBlock)) {
-                        LOGGER.info("Added mined block to my chain, broadcasting it");
+                        LOGGER.info("Added new block");
                         outPeers.broadcast(new Message(MessageType.NewBlock, new NewBlockData(minedBlock, myId)));
                     } else {
-                        LOGGER.info("Discarded mined block, invalid or old");
+                        LOGGER.info("Discarded miner block");
                     }
                     minerThread.maybeMine(blockchain);
                     break;
@@ -385,5 +349,4 @@ public class Backend {
             }
         }
     }
-
 }

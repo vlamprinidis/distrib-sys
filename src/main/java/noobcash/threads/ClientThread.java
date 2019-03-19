@@ -8,7 +8,6 @@ import java.net.InetAddress;
 import java.net.Socket;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
-import java.util.logging.Level;
 import java.util.logging.Logger;
 
 public class ClientThread extends Thread {
@@ -34,16 +33,15 @@ public class ClientThread extends Thread {
             try {
                 socket = new Socket(address, port);
             } catch (IOException e) {
-                LOGGER.log(Level.SEVERE, e.toString(), e);
+                LOGGER.severe("Can't open client socket");
                 return;
             }
         }
-        LOGGER.fine("Connected to peer with port : " + port);
         ObjectOutputStream oos;
         try {
             oos = new ObjectOutputStream(socket.getOutputStream());
         } catch (IOException e) {
-            LOGGER.log(Level.SEVERE, e.toString(), e);
+            LOGGER.severe("Can't create output stream");
             return;
         }
         Message msg;
@@ -52,12 +50,13 @@ public class ClientThread extends Thread {
                 msg = queue.take();
                 oos.writeObject(msg);
             } catch (InterruptedException e) {
-                LOGGER.log(Level.SEVERE, e.toString(), e);
-                return;
+                LOGGER.severe("Interrupted while take'ing message");
+                continue;
             } catch (IOException e) {
-                LOGGER.log(Level.SEVERE, e.toString(), e);
+                LOGGER.severe("Can't write to client socket");
+                return;
             }
-            LOGGER.finer("Successfully sent message to CLI");
+            // LOGGER.finest("Successfully sent message to cli");
         }
     }
 
@@ -65,7 +64,7 @@ public class ClientThread extends Thread {
         try {
             queue.put(msg);
         } catch (InterruptedException e) {
-            LOGGER.log(Level.SEVERE, e.toString(), e);
+            LOGGER.severe("Interrupted while put'ing to clientThread queue");
         }
     }
 }

@@ -5,6 +5,8 @@ import java.security.PublicKey;
 import java.util.*;
 import java.util.logging.Logger;
 
+import static noobcash.utilities.ErrorUtilities.fatal;
+
 
 public class Blockchain implements Serializable {
 
@@ -36,19 +38,11 @@ public class Blockchain implements Serializable {
         confirmedUTXOs.add(genesisUTXO);
         unconfirmedUTXOs = new UTXOs(confirmedUTXOs);
 
+        // Yes, send money to myself, from myself
         Transaction genesisTSX = createTransaction(publicKey, 100* networkSize);
-        // yes, send money to myself, from myself
 
-        if (genesisTSX == null) {
-            LOGGER.severe("Not enough money for genesis tsx !?");
-            System.exit(1);
-        }
-        if(!genesisTSX.verify(unconfirmedUTXOs)) {
-            LOGGER.severe("Couldn't verify genesis tsx !?");
-            System.exit(1);
-        }
-        genesisTSX.apply(unconfirmedUTXOs);
-        // tsx hasn't been confirmed yet
+        if (genesisTSX == null) fatal("Can't create genesis transaction");
+        if (!verifyApplyTransaction(genesisTSX)) fatal("Can't verify genesis transaction");
 
         Block genesisBlock = new Block(0, new ArrayList<>(Collections.singletonList(genesisTSX)), "1");
         genesisBlock.hash();
@@ -58,19 +52,21 @@ public class Blockchain implements Serializable {
 
     /*
      * Validate given chain
-     * If valid replace current, rebuild UTXO, modify pool
+     * If valid replace current, rebuild UTXOs's, modify pool
      * If invalid, return false and don't change anything
      */
     public boolean replaceChain(ArrayList<Block> newChain) {
+        // Start with just genesis UTXO
+
         UTXOs newConfirmedUTXOs = new UTXOs();
         newConfirmedUTXOs.add(genesisUTXO);
-        // start with just genesis UTXO
 
+        // Chain that might replace mine
+        // Copy not necessary but helps to reuse existing functions
         ArrayList<Block> myNewChain = new ArrayList<>();
-        // try to add every newChain's block to myNewChain
         for (Block block : newChain) {
             if (!addBlock(block, myNewChain, newConfirmedUTXOs)) {
-                LOGGER.info("Replace chain : couldn't add block");
+                LOGGER.fine("Abort replace chain");
                 return false;
             }
         }
@@ -116,7 +112,7 @@ public class Blockchain implements Serializable {
             Transaction t = it.next();
             if (!t.verify(unconfirmedUTXOs)) {
                 it.remove();
-                LOGGER.warning("BuildUnconfirmedUTXOs : dropped transaction");
+                LOGGER.info("Transaction dropped");
             } else {
                 t.apply(unconfirmedUTXOs);
             }
@@ -125,11 +121,15 @@ public class Blockchain implements Serializable {
     }
 
     /*
-     * Check if a block has valid structure but is not next expected
+     * Check if a block has valid structure but index bigger that expected
      * If true we might need to ask about possible fork
      */
-    public boolean isBetter(Block block) {
-        return block.verifyStructure(blockSize, difficulty) && !isExpectedNext(chain, block);
+    public boolean possibleLongerFork(Block block) {
+        if (!block.verifyStructure(blockSize, difficulty)) {
+            LOGGER.warning("Bad block structure");
+            return false;
+        }
+        return block.getIndex() > (getLastBlock().getIndex() + 1);
     }
 
     /*
@@ -145,16 +145,16 @@ public class Blockchain implements Serializable {
         // Check order and structure
         if (chain.isEmpty()) {
             if (!block.isGenesis()) {
-                LOGGER.warning("Add block : non-genesis block to empty chain !?");
+                LOGGER.warning("Trying to add non-genesis block to empty chain");
                 return false;
             }
         } else {
             if(!isExpectedNext(chain, block)) {
-                LOGGER.info("Add block : not expected next");
+                LOGGER.finer("Block not next expected");
                 return false;
             }
             if (!block.verifyStructure(blockSize, difficulty)) {
-                LOGGER.warning("Add block : bad structure");
+                LOGGER.warning("Bad block structure");
                 return false;
             }
         }
@@ -189,7 +189,6 @@ public class Blockchain implements Serializable {
         return true;
     }
 
-    @SuppressWarnings("BooleanMethodIsAlwaysInverted")
     private static boolean isExpectedNext(ArrayList<Block> chain, Block block) {
         Block lastBlock = chain.get(chain.size() - 1);
         return (block.getIndex() == lastBlock.getIndex() + 1) && (block.getPreviousHash().equals(lastBlock.getCurrentHash()));

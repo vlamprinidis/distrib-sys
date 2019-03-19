@@ -37,28 +37,28 @@ public class MinerThread extends Thread{
         Block block;
         Random randomStream = new Random();
         while(true) {
-            LOGGER.info("Waiting block to mine");
             try {
                 msg = inQueue.take();
             } catch (InterruptedException e) {
-                LOGGER.warning("Miner got interrupted while take'ing block to mine");
+                // LOGGER.info("Interrupted while take'ing block from queue");
                 continue;
             }
             if (msg.messageType != MessageType.BlockToMine) {
-                LOGGER.severe("Instead of BlocToMine, got : " + msg.messageType);
+                LOGGER.severe("Instead of BlocKToMine, got : " + msg.messageType);
                 continue;
             }
             block = ((Block) msg.data);
-            LOGGER.finer("Miner got block to mine : " + block.getIndex());
+            // LOGGER.finer("Mining block " + block.getIndex());
 
             // Check if interrupted, clearing interrupt flag if it is set
             while (!interrupted()){
                 if (block.tryMine(randomStream.nextInt(), difficulty)) {
-                    LOGGER.info("Block mined !");
+                    // LOGGER.fine("Block mined");
                     try {
                         outQueue.put(new Message(MessageType.BlockMined, block));
                     } catch (InterruptedException e) {
-                        LOGGER.warning("Miner interrupted while put'ing mined block");
+                        // TODO : remove it
+                        LOGGER.info("Interrupted while put'ing mined block to queue");
                     }
                     break;
                 }
@@ -82,11 +82,10 @@ public class MinerThread extends Thread{
     public void maybeMine(Blockchain blockchain){
         if (mineInProgress || !blockchain.isFull()) return;
         try {
-            LOGGER.info("Put'ing block to be mined");
             mineInProgress = true;
             inQueue.put(new Message(MessageType.BlockToMine, blockchain.createBlock()));
         } catch (InterruptedException e) {
-            LOGGER.severe("Unexpectedly interrupted while put'ing block to be mined");
+            LOGGER.severe("Interrupted while put'ing block to miner queue");
         }
     }
 
