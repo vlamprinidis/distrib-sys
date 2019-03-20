@@ -63,10 +63,15 @@ public class Backend {
         }
 
         String n = cmd.getOptionValue("number");
-        String p = cmd.getOptionValue("port");
         String b = cmd.getOptionValue("block");
         String d = cmd.getOptionValue("difficulty");
-        boolean isBootstrap = p == null;
+        String p = cmd.getOptionValue("port");
+
+        final int networkSize = Integer.parseInt(n);
+        final int blockSize = Integer.parseInt(b);
+        final int difficulty = Integer.parseInt(d);
+        final boolean isBootstrap = p == null;
+        final int myPort = (isBootstrap) ? BS_PORT : Integer.parseInt(p);
 
 
         LOGGER.setUseParentHandlers(false);
@@ -79,7 +84,8 @@ public class Backend {
 
         FileHandler fileHandler;
         try {
-            fileHandler = new FileHandler("noobcash.%u.%g.log");
+            fileHandler = new FileHandler("noobcash.n-" + networkSize + ".b-" + blockSize + ".d-" +
+                    difficulty + ".%u.log");
             fileHandler.setFormatter(new SimpleFormatter());
             fileHandler.setLevel(Level.ALL);
             LOGGER.addHandler(fileHandler);
@@ -95,12 +101,8 @@ public class Backend {
             return;
         }
 
-        final int myPort = (isBootstrap) ? BS_PORT : Integer.parseInt(p);
-        final int blockSize = Integer.parseInt(b);
-        final int difficulty = Integer.parseInt(d);
         int myId;
         PeerInfo[] peers;
-        final int networkSize = Integer.parseInt(n);
         BlockingQueue<Message> inQueue = new LinkedBlockingDeque<>();
         // InPeers inPeers;
         OutPeers outPeers;
