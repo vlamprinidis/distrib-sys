@@ -32,7 +32,7 @@ public class Backend {
     private static final Logger LOGGER = Logger.getLogger("NOOBCASH");
     private static final int BS_PORT = 5000;
 
-    @SuppressWarnings("Duplicates")
+    @SuppressWarnings({"Duplicates", "InfiniteLoopStatement"})
     public static void main(String[] args) throws ClassNotFoundException {
         Options options = new Options();
         Option num_opt = new Option("n", "number", true, "number of peers");
@@ -243,7 +243,7 @@ public class Backend {
             try {
                 msg = inQueue.take();
             } catch (InterruptedException e) {
-                LOGGER.warning("Interrupted while take'ing message from queue");
+                LOGGER.severe("Interrupted while take'ing message from queue");
                 continue;
             }
 
@@ -363,9 +363,6 @@ public class Backend {
                         minerThread.maybeMine(blockchain);
                     }
                     break;
-                case Stop:
-                    LOGGER.info("Bye bye");
-                    return;
                 default:
                     LOGGER.warning("Unexpected message : " + msg.messageType);
             }

@@ -40,7 +40,11 @@ public class MinerThread extends Thread{
             try {
                 msg = inQueue.take();
             } catch (InterruptedException e) {
-                LOGGER.info("Interrupted while take'ing block from queue");
+                LOGGER.severe("Interrupted while take'ing block from queue");
+                continue;
+            }
+            if (msg.messageType == MessageType.Stop) {
+                LOGGER.info("Miner stopped, wasn't mining anyway");
                 continue;
             }
             if (msg.messageType != MessageType.BlockToMine) {
@@ -51,27 +55,41 @@ public class MinerThread extends Thread{
 
             LOGGER.info("Mining block " + block.getIndex());
 
-            while (!isInterrupted()){
+            while(true) {
+                Message newMessage;
+
+                // New message -> mining will stop
+                if ((newMessage = inQueue.peek()) != null) {
+                    if (newMessage.messageType == MessageType.Stop) {
+                        LOGGER.info("Miner stopped");
+                        // If stop message, consume it
+                        inQueue.poll();
+                    }
+                    break;
+                }
+
                 if (block.tryMine(randomStream.nextInt(), difficulty)) {
                     LOGGER.info("Mined block " + block.getIndex());
                     try {
                         outQueue.put(new Message(MessageType.BlockMined, block));
                     } catch (InterruptedException e) {
-                        LOGGER.info("Interrupted while put'ing mined block");
+                        LOGGER.severe("Interrupted while put'ing mined block");
                     }
                     break;
                 }
             }
-            if (interrupted()) LOGGER.info("Interrupted while mining");
         }
     }
 
     /*
-     * Interrupt miner, aborting possible mining operation
-     * Called when new block is found or chain is replaced
+     * Inform miner to stop mining current block
      */
     public void stopMining() {
-        interrupt();
+        try {
+            inQueue.put(new Message(MessageType.Stop, null));
+        } catch (InterruptedException e) {
+            LOGGER.severe("Interrupted while STOP-ing miner");
+        }
     }
 
     /*
