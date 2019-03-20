@@ -42,6 +42,14 @@ public class Backend {
         Option port_opt = new Option("p", "port", true, "port to use");
         options.addOption(port_opt);
 
+        Option block_opt = new Option("b", "block", true, "block size");
+        block_opt.setRequired(true);
+        options.addOption(block_opt);
+
+        Option diff_opt = new Option("d", "difficulty", true, "PoW difficulty");
+        diff_opt.setRequired(true);
+        options.addOption(diff_opt);
+
         CommandLineParser parser = new DefaultParser();
         HelpFormatter formatter = new HelpFormatter();
         CommandLine cmd;
@@ -56,6 +64,8 @@ public class Backend {
 
         String n = cmd.getOptionValue("number");
         String p = cmd.getOptionValue("port");
+        String b = cmd.getOptionValue("block");
+        String d = cmd.getOptionValue("difficulty");
         boolean isBootstrap = p == null;
 
 
@@ -85,7 +95,9 @@ public class Backend {
             return;
         }
 
-        int myPort = (isBootstrap) ? BS_PORT : Integer.parseInt(p);
+        final int myPort = (isBootstrap) ? BS_PORT : Integer.parseInt(p);
+        final int blockSize = Integer.parseInt(b);
+        final int difficulty = Integer.parseInt(d);
         int myId;
         PeerInfo[] peers;
         final int networkSize = Integer.parseInt(n);
@@ -99,8 +111,8 @@ public class Backend {
             LOGGER.severe("Can't generate key pair");
             return;
         }
-        final int difficulty = 4;
-        Blockchain blockchain = new Blockchain(wallet, 6, difficulty);
+
+        Blockchain blockchain = new Blockchain(wallet, blockSize, difficulty);
 
         CliThread cliThread = new CliThread(myPort + 1, inQueue);
         cliThread.setDaemon(true);
