@@ -242,10 +242,17 @@ public class Backend {
                     int x = msg.data == null ? myId : (Integer) msg.data;
                     if (x >= networkSize) {
                         LOGGER.warning("CLI request with invalid id (balance)");
+                        cliThread.sendMessage(new Message(MessageType.BalanceResponse,
+                                null));
                         break;
                     }
                     cliThread.sendMessage(new Message(MessageType.BalanceResponse,
                             blockchain.getBalance(peers[x].publicKey)));
+                    break;
+                case BalancesRequest:
+                    int[] balances = new int[networkSize];
+                    for (int k = 0; k < networkSize; k++) balances[k] = blockchain.getBalance(peers[k].publicKey);
+                    cliThread.sendMessage(new Message(MessageType.BalancesResponse, balances));
                     break;
                 case PeerInfoRequest:
                     Integer y = (Integer) msg.data;

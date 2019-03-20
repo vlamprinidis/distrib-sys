@@ -154,6 +154,15 @@ public class Cli {
                     }
                     System.out.println(bMsg.data + " coins" );
                     break;
+                case "balances":
+                    Message bsMsg = sendMessage(oos, ois, new Message(MessageType.BalancesRequest, null),
+                            MessageType.BalancesResponse);
+                    if (bsMsg == null) return;
+                    int[] balances = (int[]) bsMsg.data;
+                    for (int k = 0; k < balances.length; k++) {
+                        System.out.println(k + " : " + balances[k] + " coins");
+                    }
+                    break;
                 case "file":
                     fileTransaction(oos, ois, id);
                     break;
