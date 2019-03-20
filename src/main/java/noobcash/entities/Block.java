@@ -51,7 +51,7 @@ public class Block implements Serializable {
         return verifyNonce(difficulty);
     }
 
-    public boolean isGenesis() {
+    boolean isGenesis() {
         return this.index == 0 && "1".equals(this.previousHash) && this.nonce == 0 && this.transactions.size() == 1 && verifyHash();
     }
 
@@ -66,6 +66,7 @@ public class Block implements Serializable {
         return calculateHash().equals(currentHash);
     }
 
+    @SuppressWarnings("BooleanMethodIsAlwaysInverted")
     boolean verifyStructure(int blockSize, int difficulty) {
         return transactions.size() == blockSize && verifyNonce(difficulty) && verifyHash();
     }

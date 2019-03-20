@@ -21,11 +21,13 @@ public class Cli {
     public static void main(String[] args) throws ClassNotFoundException {
         Options options = new Options();
         Option port_opt = new Option("p", "port", true, "server port");
-        port_opt.setRequired(true);
         options.addOption(port_opt);
 
         Option file_opt = new Option("f", "file", false, "file transactions first");
         options.addOption(file_opt);
+
+        Option ten_opt = new Option("t", "ten", false, "use 10nodes instead of 5nodes");
+        options.addOption(ten_opt);
 
         CommandLineParser parser = new DefaultParser();
         HelpFormatter formatter = new HelpFormatter();
@@ -40,8 +42,11 @@ public class Cli {
         }
 
         String p = cmd.getOptionValue("port");
-        int port = Integer.parseInt(p);
+        int port = cmd.hasOption("p") ? Integer.parseInt(p) : Backend.BS_PORT;
+        // CLI will be using port + 1
+        port++;
         boolean file_first = cmd.hasOption("f");
+        boolean ten = cmd.hasOption("t");
 
         InetAddress serverAddress;
         try {
@@ -80,7 +85,7 @@ public class Cli {
         int id = (Integer) msg.data;
         System.out.println("ID : " + id);
 
-        if (file_first) fileTransaction(oos, ois, id);
+        if (file_first) fileTransaction(oos, ois, id, ten);
 
         String line;
         BufferedReader consoleReader = new BufferedReader(new InputStreamReader(System.in));
@@ -164,7 +169,7 @@ public class Cli {
                     }
                     break;
                 case "file":
-                    fileTransaction(oos, ois, id);
+                    fileTransaction(oos, ois, id, ten);
                     break;
                 case "q":
                     System.out.println("Bye!");
@@ -193,9 +198,10 @@ public class Cli {
         return inMessage;
     }
 
-    private static void fileTransaction(ObjectOutputStream oos, ObjectInputStream ois, int id)
+    private static void fileTransaction(ObjectOutputStream oos, ObjectInputStream ois, int id, boolean ten)
             throws ClassNotFoundException {
-        File file = new File("./transactions/5nodes/transactions" + id + ".txt");
+        int size = ten ? 10 : 5;
+        File file = new File("./transactions/" + size + "nodes/transactions" + id + ".txt");
         BufferedReader fileReader;
         try {
             fileReader = new BufferedReader(new FileReader(file));

@@ -30,7 +30,8 @@ import static noobcash.utilities.ErrorUtilities.fatal;
 
 public class Backend {
     private static final Logger LOGGER = Logger.getLogger("NOOBCASH");
-    private static final int BS_PORT = 5000;
+    // BS_PORT = DEFAULT PORT
+    static final int BS_PORT = 5000;
 
     @SuppressWarnings({"Duplicates", "InfiniteLoopStatement"})
     public static void main(String[] args) throws ClassNotFoundException {
@@ -42,13 +43,16 @@ public class Backend {
         Option port_opt = new Option("p", "port", true, "port to use");
         options.addOption(port_opt);
 
-        Option block_opt = new Option("b", "block", true, "block size");
+        Option block_opt = new Option("c", "capacity", true, "block capacity");
         block_opt.setRequired(true);
         options.addOption(block_opt);
 
         Option diff_opt = new Option("d", "difficulty", true, "PoW difficulty");
         diff_opt.setRequired(true);
         options.addOption(diff_opt);
+
+        Option bs_opt = new Option("b", "bootstrap", false, "bootstrap flag");
+        options.addOption(bs_opt);
 
         CommandLineParser parser = new DefaultParser();
         HelpFormatter formatter = new HelpFormatter();
@@ -63,16 +67,15 @@ public class Backend {
         }
 
         String n = cmd.getOptionValue("number");
-        String b = cmd.getOptionValue("block");
+        String c = cmd.getOptionValue("capacity");
         String d = cmd.getOptionValue("difficulty");
         String p = cmd.getOptionValue("port");
 
         final int networkSize = Integer.parseInt(n);
-        final int blockSize = Integer.parseInt(b);
+        final int capacity = Integer.parseInt(c);
         final int difficulty = Integer.parseInt(d);
-        final boolean isBootstrap = p == null;
-        final int myPort = (isBootstrap) ? BS_PORT : Integer.parseInt(p);
-
+        final boolean isBootstrap = cmd.hasOption("b");
+        final int myPort = (isBootstrap || !cmd.hasOption("p")) ? BS_PORT : Integer.parseInt(p);
 
         LOGGER.setUseParentHandlers(false);
         LOGGER.setLevel(Level.ALL);
@@ -84,7 +87,7 @@ public class Backend {
 
         FileHandler fileHandler;
         try {
-            fileHandler = new FileHandler("noobcash.n-" + networkSize + ".b-" + blockSize + ".d-" +
+            fileHandler = new FileHandler("noobcash.n-" + networkSize + ".c-" + capacity + ".d-" +
                     difficulty + ".%u.log");
             fileHandler.setFormatter(new SimpleFormatter());
             fileHandler.setLevel(Level.ALL);
@@ -114,7 +117,7 @@ public class Backend {
             return;
         }
 
-        Blockchain blockchain = new Blockchain(wallet, blockSize, difficulty);
+        Blockchain blockchain = new Blockchain(wallet, capacity, difficulty);
 
         CliThread cliThread = new CliThread(myPort + 1, inQueue);
         cliThread.setDaemon(true);

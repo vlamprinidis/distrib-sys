@@ -18,16 +18,16 @@ public class Blockchain implements Serializable {
     private UTXOs unconfirmedUTXOs;
     private TransactionOutput genesisUTXO;
     private static int difficulty;
-    private static int blockSize;
+    private static int capacity;
 
-    public Blockchain(Wallet wallet, int blockSize, int difficulty) {
+    public Blockchain(Wallet wallet, int capacity, int difficulty) {
         chain = new LinkedList<>();
         this.wallet = wallet;
         confirmedUTXOs = new UTXOs();
         unconfirmedUTXOs = new UTXOs();
         tsxPool = new LinkedList<>();
         Blockchain.difficulty = difficulty;
-        Blockchain.blockSize = blockSize;
+        Blockchain.capacity = capacity;
     }
 
     public Block generateGenesis(int networkSize){
@@ -90,7 +90,7 @@ public class Blockchain implements Serializable {
      * Must be called only if isFull
      */
     public Block createBlock(){
-        List<Transaction> transactions = new ArrayList<>(tsxPool.subList(0, blockSize));
+        List<Transaction> transactions = new ArrayList<>(tsxPool.subList(0, capacity));
         Block previousBlock = chain.getLast();
         return new Block(previousBlock.getIndex() + 1, transactions, previousBlock.getCurrentHash());
     }
@@ -125,7 +125,7 @@ public class Blockchain implements Serializable {
      * If true we might need to ask about possible fork
      */
     public boolean possibleLongerFork(Block block) {
-        if (!block.verifyStructure(blockSize, difficulty)) {
+        if (!block.verifyStructure(capacity, difficulty)) {
             LOGGER.warning("Bad block structure");
             return false;
         }
@@ -153,7 +153,7 @@ public class Blockchain implements Serializable {
                 LOGGER.finer("Block not next expected");
                 return false;
             }
-            if (!block.verifyStructure(blockSize, difficulty)) {
+            if (!block.verifyStructure(capacity, difficulty)) {
                 LOGGER.warning("Bad block structure");
                 return false;
             }
@@ -206,10 +206,10 @@ public class Blockchain implements Serializable {
     }
 
     /*
-     * Check if there are at least blockSize transactions in current pool
+     * Check if there are at least capacity transactions in current pool
      */
     public boolean isFull() {
-        return tsxPool.size() >= blockSize;
+        return tsxPool.size() >= capacity;
     }
 
     /*

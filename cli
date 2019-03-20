@@ -3,17 +3,7 @@
 import os
 import sys
 
-def usage():
-    print("usage: {} [port] [-f]".format(sys.argv[0]))
-    sys.exit()
-
-if (len(sys.argv) < 2 or len(sys.argv) > 3):
-    usage()
-
-port = int(sys.argv[1]) + 1
-cmd = "./gradlew cli --console=plain -q  "
-if len(sys.argv) == 3 and sys.argv[2] == '-f':
-    cmd += ' --args="-p {} -f"'.format(port)
-else:
-    cmd += ' --args="-p {}"'.format(port)
+cmd = './gradlew cli --console=plain -q '
+if (sys.argv[1:]):
+    cmd += ' --args="{}"'.format(' '.join(sys.argv[1:]))
 os.system(cmd)
