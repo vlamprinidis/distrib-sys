@@ -4,11 +4,6 @@ import os
 import sys
 
 if (len(sys.argv) < 2):
-    print("usage: {} network-size [port]".format(sys.argv[0]))
+    print("usage: {} -n network-size [-p port] -b block-size -d pow-difficulty".format(sys.argv[0]))
     sys.exit()
-if (len(sys.argv) == 2):
-    params = "-n {}".format(sys.argv[1])
-else:
-    params = "-n {} -p {}".format(sys.argv[1], sys.argv[2])
-
-os.system('./gradlew run --args="{}"'.format(params))
+os.system('./gradlew run --args="{}"'.format(' '.join(sys.argv[1:])))

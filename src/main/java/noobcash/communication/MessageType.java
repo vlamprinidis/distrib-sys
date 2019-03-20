@@ -10,6 +10,8 @@ public enum MessageType {
     JoinResponse,
     BalanceRequest,
     BalanceResponse,
+    BalancesRequest,
+    BalancesResponse,
     PeerInfoRequest,
     PeerInfoResponse,
     CliTsxRequest,
