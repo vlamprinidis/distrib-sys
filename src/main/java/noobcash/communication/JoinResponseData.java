@@ -6,17 +6,16 @@ import noobcash.entities.TransactionOutput;
 import noobcash.network.PeerInfo;
 
 import java.io.Serializable;
-import java.util.ArrayList;
 import java.util.LinkedList;
 
 public class JoinResponseData implements Serializable {
     public int id;
     public PeerInfo[] peerInfo;
-    public ArrayList<Block> chain;
+    public LinkedList<Block> chain;
     public LinkedList<Transaction> tsxPool;
     public TransactionOutput genesisUTXO;
 
-    public JoinResponseData(int id, PeerInfo[] peerInfo, ArrayList<Block> chain,
+    public JoinResponseData(int id, PeerInfo[] peerInfo, LinkedList<Block> chain,
                             LinkedList<Transaction> tsxPool, TransactionOutput genesisUTXO) {
         this.id = id;
         this.peerInfo = peerInfo;

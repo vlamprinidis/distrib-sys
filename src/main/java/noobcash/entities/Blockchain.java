@@ -11,7 +11,7 @@ import static noobcash.utilities.ErrorUtilities.fatal;
 public class Blockchain implements Serializable {
 
     private static final Logger LOGGER = Logger.getLogger("NOOBCASH");
-    private ArrayList<Block> chain;
+    private LinkedList<Block> chain;
     private Wallet wallet;
     private LinkedList<Transaction> tsxPool;
     private UTXOs confirmedUTXOs;
@@ -21,7 +21,7 @@ public class Blockchain implements Serializable {
     private static int blockSize;
 
     public Blockchain(Wallet wallet, int blockSize, int difficulty) {
-        chain = new ArrayList<>();
+        chain = new LinkedList<>();
         this.wallet = wallet;
         confirmedUTXOs = new UTXOs();
         unconfirmedUTXOs = new UTXOs();
@@ -55,7 +55,7 @@ public class Blockchain implements Serializable {
      * If valid replace current, rebuild UTXOs's, modify pool
      * If invalid, return false and don't change anything
      */
-    public boolean replaceChain(ArrayList<Block> newChain) {
+    public boolean replaceChain(LinkedList<Block> newChain) {
         // Start with just genesis UTXO
 
         UTXOs newConfirmedUTXOs = new UTXOs();
@@ -63,7 +63,7 @@ public class Blockchain implements Serializable {
 
         // Chain that might replace mine
         // Copy not necessary but helps to reuse existing functions
-        ArrayList<Block> myNewChain = new ArrayList<>();
+        LinkedList<Block> myNewChain = new LinkedList<>();
         for (Block block : newChain) {
             if (!addBlock(block, myNewChain, newConfirmedUTXOs)) {
                 LOGGER.fine("Abort replace chain");
@@ -91,7 +91,7 @@ public class Blockchain implements Serializable {
      */
     public Block createBlock(){
         List<Transaction> transactions = new ArrayList<>(tsxPool.subList(0, blockSize));
-        Block previousBlock = chain.get(chain.size() - 1);
+        Block previousBlock = chain.getLast();
         return new Block(previousBlock.getIndex() + 1, transactions, previousBlock.getCurrentHash());
     }
 
@@ -141,7 +141,7 @@ public class Blockchain implements Serializable {
      * Doesn't modify unconfirmed UTXOs and tsxPool in any way
      */
     @SuppressWarnings("BooleanMethodIsAlwaysInverted")
-    private static boolean addBlock(Block block, ArrayList<Block> chain, UTXOs confirmedUTXOs){
+    private static boolean addBlock(Block block, LinkedList<Block> chain, UTXOs confirmedUTXOs){
         // Check order and structure
         if (chain.isEmpty()) {
             if (!block.isGenesis()) {
@@ -189,8 +189,8 @@ public class Blockchain implements Serializable {
         return true;
     }
 
-    private static boolean isExpectedNext(ArrayList<Block> chain, Block block) {
-        Block lastBlock = chain.get(chain.size() - 1);
+    private static boolean isExpectedNext(LinkedList<Block> chain, Block block) {
+        Block lastBlock = chain.getLast();
         return (block.getIndex() == lastBlock.getIndex() + 1) && (block.getPreviousHash().equals(lastBlock.getCurrentHash()));
     }
 
@@ -252,7 +252,7 @@ public class Blockchain implements Serializable {
     }
 
     public Block getLastBlock() {
-        return chain.get(chain.size() - 1);
+        return chain.getLast();
     }
 
     public TransactionOutput getGenesisUTXO() {
@@ -263,7 +263,7 @@ public class Blockchain implements Serializable {
         this.genesisUTXO = genesisUTXO;
     }
 
-    public ArrayList<Block> getChain() {
+    public LinkedList<Block> getChain() {
         return chain;
     }
 

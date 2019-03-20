@@ -14,7 +14,7 @@ import java.net.ServerSocket;
 import java.net.Socket;
 import java.net.UnknownHostException;
 import java.security.NoSuchAlgorithmException;
-import java.util.ArrayList;
+import java.util.LinkedList;
 import java.util.Random;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingDeque;
@@ -337,7 +337,7 @@ public class Backend {
                     break;
                 case ChainResponse:
                     @SuppressWarnings("unchecked")
-                    ArrayList<Block> newChain = (ArrayList<Block>) msg.data;
+                    LinkedList<Block> newChain = (LinkedList<Block>) msg.data;
                     if (newChain.size() > blockchain.getChain().size()) {
                         LOGGER.info("Received a bigger chain, length : " + newChain.size());
                         if (blockchain.replaceChain(newChain)) {
