@@ -275,8 +275,8 @@ public class Backend {
                     } else {
                         if (!blockchain.verifyApplyTransaction(cliTsx)) fatal("Can't verify transaction I just made");
                         responseString = "Transaction accepted";
-                        outPeers.broadcast(new Message(MessageType.NewTransaction, cliTsx));
                         minerThread.maybeMine(blockchain);
+                        outPeers.broadcast(new Message(MessageType.NewTransaction, cliTsx));
                     }
                     cliThread.sendMessage(new Message(MessageType.CliTsxResponse, responseString));
                     break;
@@ -296,7 +296,7 @@ public class Backend {
                     break;
                 case NewBlock:
                     NewBlockData newBlockData = (NewBlockData) msg.data;
-                    LOGGER.finest("New block received from peer, index = " + newBlockData.block.getIndex());
+                    LOGGER.info("New block received from peer, index = " + newBlockData.block.getIndex());
                     if (!blockchain.addBlock(newBlockData.block)) {
                         if (!blockchain.possibleLongerFork(newBlockData.block)) {
                             LOGGER.fine("Discarding received (from peer) block");
@@ -305,7 +305,7 @@ public class Backend {
                             outPeers.send(newBlockData.id, new Message(MessageType.ChainRequest, myId));
                         }
                     } else {
-                        LOGGER.fine("Added received (from peer) block");
+                        LOGGER.info("Added received (from peer) block");
                         minerThread.stopMining();
                         minerThread.maybeMine(blockchain);
                     }
@@ -318,7 +318,7 @@ public class Backend {
                     @SuppressWarnings("unchecked")
                     ArrayList<Block> newChain = (ArrayList<Block>) msg.data;
                     if (newChain.size() > blockchain.getChain().size()) {
-                        LOGGER.info("Received a bigger chain");
+                        LOGGER.info("Received a bigger chain, length : " + newChain.size());
                         if (blockchain.replaceChain(newChain)) {
                             LOGGER.info("Replaced chain with bigger");
                             minerThread.stopMining();
@@ -327,20 +327,20 @@ public class Backend {
                             LOGGER.warning("Bad received chain");
                         }
                     } else {
-                        LOGGER.info("Received a smaller chain");
+                        LOGGER.info("Received a smaller chain, length : " + newChain.size());
                     }
                     break;
                 case BlockMined:
-                    minerThread.blockMinedAck();
                     Block minedBlock = (Block) msg.data;
-                    LOGGER.finest("New block received from miner, index = " + minedBlock.getIndex());
+                    LOGGER.info("New block received from miner, index = " + minedBlock.getIndex());
                     if (blockchain.addBlock(minedBlock)) {
                         LOGGER.info("Added received (from miner) block");
+                        minerThread.maybeMine(blockchain);
                         outPeers.broadcast(new Message(MessageType.NewBlock, new NewBlockData(minedBlock, myId)));
                     } else {
                         LOGGER.info("Discarding received (from miner) block");
+                        minerThread.maybeMine(blockchain);
                     }
-                    minerThread.maybeMine(blockchain);
                     break;
                 case Stop:
                     LOGGER.info("Bye bye");

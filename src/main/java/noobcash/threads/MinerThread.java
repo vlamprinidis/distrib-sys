@@ -18,15 +18,15 @@ public class MinerThread extends Thread{
     private static final Logger LOGGER = Logger.getLogger("NOOBCASH");
     private BlockingQueue<Message> inQueue;
     private BlockingQueue<Message> outQueue;
-    private boolean mineInProgress;
-    // Main thread's view about whether or not mining is in progress
+    private int lastBlockIndex;
+    // Last block requested to mine
     private int difficulty;
 
     public MinerThread(BlockingQueue<Message> queue, int difficulty) {
         this.outQueue = queue;
         inQueue = new LinkedBlockingQueue<>();
         this.difficulty = difficulty;
-        mineInProgress = false;
+        lastBlockIndex = 0;
     }
 
     @SuppressWarnings("InfiniteLoopStatement")
@@ -57,7 +57,7 @@ public class MinerThread extends Thread{
                     try {
                         outQueue.put(new Message(MessageType.BlockMined, block));
                     } catch (InterruptedException e) {
-                        interrupt();
+                        LOGGER.info("Interrupted while put'ing mined block");
                     }
                     break;
                 }
@@ -71,29 +71,22 @@ public class MinerThread extends Thread{
      * Called when new block is found or chain is replaced
      */
     public void stopMining() {
-        mineInProgress = false;
         interrupt();
-        // Don't trust flag, interrupt thread anyway (no harm done)
     }
 
     /*
      * Send a block to miner, if necessary
      */
     public void maybeMine(Blockchain blockchain){
-        if (mineInProgress || !blockchain.isFull()) return;
-        try {
-            mineInProgress = true;
-            inQueue.put(new Message(MessageType.BlockToMine, blockchain.createBlock()));
-        } catch (InterruptedException e) {
-            LOGGER.severe("Interrupted while put'ing block to miner queue");
+        if (blockchain.getLastBlock().getIndex()  >= lastBlockIndex && blockchain.isFull()) {
+            try {
+                Block block = blockchain.createBlock();
+                // Invariant : index' > index
+                lastBlockIndex = block.getIndex();
+                inQueue.put(new Message(MessageType.BlockToMine, blockchain.createBlock()));
+            } catch (InterruptedException e) {
+                LOGGER.severe("Interrupted while put'ing block to miner queue");
+            }
         }
-    }
-
-    /*
-     * Called from main thread when
-     * BlockMined message is seen
-     */
-    public void blockMinedAck() {
-        mineInProgress = false;
     }
 }
