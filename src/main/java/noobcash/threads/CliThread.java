@@ -2,6 +2,7 @@ package noobcash.threads;
 
 import noobcash.communication.Message;
 
+import java.io.EOFException;
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
@@ -23,7 +24,7 @@ public class CliThread extends Thread {
         this.queue = queue;
     }
 
-    @SuppressWarnings({"Duplicates", "InfiniteLoopStatement"})
+    @SuppressWarnings({"Duplicates"})
     @Override
     public void run() {
         ObjectInputStream ois;
@@ -48,13 +49,15 @@ public class CliThread extends Thread {
             try {
                 queue.put((Message) ois.readObject());
             } catch (InterruptedException e) {
-                // LOGGER.warning("Interrupted while put'ing message");
+                LOGGER.severe("Interrupted while put'ing message");
+            } catch (EOFException e) {
+                LOGGER.warning("Cli disconnected");
+                return;
             } catch (ClassNotFoundException e) {
                 fatal(e.toString());
             } catch (IOException e) {
                 fatal("Can't read object from cli stream");
             }
-            // LOGGER.finest("Forwarded cli message to main thread");
         }
     }
 
