@@ -16,3 +16,5 @@ gradle-app.setting
 
 *.log
 out/
+*.aux
+*.synctex.gz
