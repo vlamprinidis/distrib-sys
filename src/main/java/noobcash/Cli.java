@@ -102,7 +102,16 @@ public class Cli {
             String[] tokens = line.trim().split(" ");
             switch (tokens[0]) {
                 case "help":
-                    System.out.println("*helpful message*");
+                    System.out.println("help : print this message");
+                    System.out.println("peer <id> : print public key of peer with given id");
+                    System.out.println("peer : print public key of every peer");
+                    System.out.println("t <id> <amount> : send amount coins to peer with given id");
+                    System.out.println("view : print transactions of last confirmed block");
+                    System.out.println("balance : print my balance");
+                    System.out.println("balance <id> : print balance of peer with given id");
+                    System.out.println("balances : print node's balance");
+                    System.out.println("file : read and apply every transaction in file");
+                    System.out.println("q : quit");
                     break;
                 case "peer":
                     Integer pn = tokens.length > 1 ? Integer.parseInt(tokens[1]) : null;
